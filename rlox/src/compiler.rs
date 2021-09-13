@@ -132,7 +132,7 @@ impl<'s> Parser<'s> {
             None,
             Precedence::None,
         );
-        // rule(TokenType::And, None, Some(Parser::and_op), Precedence::And);
+        rule(TokenType::And, None, Some(Parser::and_op), Precedence::And);
         rule(TokenType::Class, None, None, Precedence::None);
         rule(TokenType::Else, None, None, Precedence::None);
         rule(
@@ -150,7 +150,7 @@ impl<'s> Parser<'s> {
             None,
             Precedence::None,
         );
-        // rule(TokenType::Or, None, Some(Parser::or_op), Precedence::Or);
+        rule(TokenType::Or, None, Some(Parser::or_op), Precedence::Or);
         rule(TokenType::Print, None, None, Precedence::None);
         rule(TokenType::Return, None, None, Precedence::None);
         // rule(TokenType::Super, Some(Parser::super_), None, Precedence::None);
@@ -288,6 +288,12 @@ impl<'s> Parser<'s> {
             self.begin_scope();
             self.block();
             self.end_scope();
+        } else if self.match_token(TokenType::If) {
+            self.if_statement();
+        } else if self.match_token(TokenType::While) {
+            self.while_statement();
+        } else if self.match_token(TokenType::For) {
+            self.for_statement();
         } else {
             self.expression_statement();
         }
@@ -321,6 +327,81 @@ impl<'s> Parser<'s> {
                 break;
             }
         }
+    }
+
+    fn if_statement(&mut self) {
+        self.consume(TokenType::LeftParen, "Expect '(' after if.");
+        self.expression();
+        self.consume(TokenType::RightParen, "Expect ')' after condition.");
+
+        let then = self.emit_jump(OpCode::JumpIfFalse(0));
+        self.emit_opcode(OpCode::Pop);
+        self.statement();
+        let else_jump = self.emit_jump(OpCode::Jump(0));
+        self.patch_jump(then);
+        self.emit_opcode(OpCode::Pop);
+
+        if self.match_token(TokenType::Else) {
+            self.statement();
+        }
+        self.patch_jump(else_jump);
+    }
+
+    fn while_statement(&mut self) {
+        let loop_start = self.chunk.code.len();
+        self.consume(TokenType::LeftParen, "Expect '(' after while.");
+        self.expression();
+        self.consume(TokenType::RightParen, "Expect ')' after condition.");
+
+        let exit = self.emit_jump(OpCode::JumpIfFalse(0));
+        self.emit_opcode(OpCode::Pop);
+        self.statement();
+        self.emit_loop(loop_start);
+        self.patch_jump(exit);
+        self.emit_opcode(OpCode::Pop);
+    }
+
+    fn for_statement(&mut self) {
+        self.begin_scope();
+        self.consume(TokenType::LeftParen, "Expect '(' after for.");
+        if self.match_token(TokenType::Semicolon) {
+        } else if self.match_token(TokenType::Var) {
+            self.var_declaration();
+        } else {
+            self.expression_statement();
+        }
+
+        let mut loop_start = self.chunk.code.len();
+        let mut exit_jump: Option<usize> = None;
+
+        if !self.match_token(TokenType::Semicolon) {
+            self.expression();
+            self.consume(TokenType::Semicolon, "Expect ';' after loop condition.");
+
+            exit_jump = Some(self.emit_jump(OpCode::JumpIfFalse(0)));
+            self.emit_opcode(OpCode::Pop);
+        }
+
+        if !self.match_token(TokenType::RightParen) {
+            let body_jump = self.emit_jump(OpCode::Jump(0));
+            let start = self.chunk.code.len();
+            self.expression();
+            self.emit_opcode(OpCode::Pop);
+            self.consume(TokenType::RightParen, "Expect ')' after for clauses.");
+            self.emit_loop(loop_start);
+            loop_start = start;
+            self.patch_jump(body_jump);
+        }
+
+        self.statement();
+        self.emit_loop(loop_start);
+
+        if let Some(exit) = exit_jump {
+            self.patch_jump(exit);
+            self.emit_opcode(OpCode::Pop);
+        }
+
+        self.end_scope();
     }
 
     fn expression_statement(&mut self) {
@@ -409,8 +490,24 @@ impl<'s> Parser<'s> {
 
     fn string(&mut self, _can_assign: bool) {
         let lexeme = self.previous.lexeme;
-        let value = &lexeme[1..(lexeme.len() - 1)];
+        let value = &lexeme[1..lexeme.chars().count() - 1];
         self.emit_constant(Value::VString(LoxString::new(value.to_string())));
+    }
+
+    fn and_op(&mut self, _can_assign: bool) {
+        let end = self.emit_jump(OpCode::JumpIfFalse(0));
+        self.emit_opcode(OpCode::Pop);
+        self.parse_precedence(Precedence::And);
+        self.patch_jump(end);
+    }
+
+    fn or_op(&mut self, _can_assign: bool) {
+        let else_jump = self.emit_jump(OpCode::JumpIfFalse(0));
+        let end_jump = self.emit_jump(OpCode::Jump(0));
+        self.patch_jump(else_jump);
+        self.emit_opcode(OpCode::Pop);
+        self.parse_precedence(Precedence::Or);
+        self.patch_jump(end_jump);
     }
 
     // helpers
@@ -513,6 +610,17 @@ impl<'s> Parser<'s> {
         self.compiler.locals[i].depth = self.compiler.scope_depth;
     }
 
+    fn patch_jump(&mut self, then: usize) {
+        let len = self.chunk.code.len();
+        let offset = len - then - 1;
+        let instr = self.chunk.code[then];
+        self.chunk.code[then] = match instr {
+            OpCode::JumpIfFalse(_) => OpCode::JumpIfFalse(offset),
+            OpCode::Jump(_) => OpCode::Jump(offset),
+            _ => panic!("No jump instruction found"),
+        };
+    }
+
     // chunk manipulation
 
     fn emit_opcode(&mut self, opcode: OpCode) {
@@ -531,6 +639,15 @@ impl<'s> Parser<'s> {
 
     fn make_constant(&mut self, constant: Value) -> usize {
         self.chunk.add_constant(constant)
+    }
+
+    fn emit_jump(&mut self, jump: OpCode) -> usize {
+        self.emit_opcode(jump);
+        self.chunk.code.len() - 1
+    }
+
+    fn emit_loop(&mut self, start: usize) {
+        self.emit_opcode(OpCode::Loop(self.chunk.code.len() - start));
     }
 
     // error handling

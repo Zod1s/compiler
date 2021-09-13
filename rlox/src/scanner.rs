@@ -79,12 +79,8 @@ impl<'s> Scanner<'s> {
     }
 
     fn make_token(&self, token_type: TokenType) -> Token<'s> {
-        Token::new(
-            token_type,
-            &self.source[self.start..self.current],
-            self.current - self.start,
-            self.line,
-        )
+        let lexeme = &self.source[self.start..self.current];
+        Token::new(token_type, lexeme, self.current - self.start, self.line)
     }
 
     fn error_token(&self, message: &'s str) -> Token<'s> {

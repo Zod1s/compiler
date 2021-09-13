@@ -1,10 +1,10 @@
 use crate::{
-    chunk::{disassemble_instruction, Chunk, OpCode},
+    chunk::{disassemble_instruction, disassemble_instruction_str, Chunk, OpCode},
     compiler,
     object::LoxString,
     types::{InterpretError, Value},
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, fs};
 
 pub struct Vm {
     chunk: Chunk,
@@ -40,6 +40,20 @@ impl Vm {
         }
     }
 
+    pub fn dump(&mut self, code: &str, out_file: &str) -> Result<(), InterpretError> {
+        let mut chunk = Chunk::new();
+        if !compiler::compile(code, &mut chunk, false) {
+            Err(InterpretError::Compile)
+        } else {
+            let mut content = String::new();
+            for (i, op) in chunk.code.iter().enumerate() {
+                content.push_str(&disassemble_instruction_str(&chunk, *op, i));
+            }
+            fs::write(out_file, content).expect("Unable to write to file");
+            Ok(())
+        }
+    }
+
     pub fn run(&mut self) -> Result<(), InterpretError> {
         loop {
             if self.ip >= self.chunk.code.len() {
@@ -61,7 +75,7 @@ impl Vm {
             }
             self.ip += 1;
             match instruction {
-                OpCode::Constant(i) => self.stack.push(self.chunk.get_constant(i)),
+                OpCode::Constant(index) => self.stack.push(self.chunk.get_constant(index)),
                 OpCode::Return => {
                     return Ok(());
                 }
@@ -94,16 +108,16 @@ impl Vm {
                     }
                     (Some(_), Some(_)) => self
                         .runtime_error("Arguments must be both numbers or at least one string.")?,
-                    _ => self.runtime_error("Error: not enough numbers on stack.")?,
+                    _ => self.runtime_error("Error: not enough numbers on stack when summing.")?,
                 },
                 OpCode::Sub => {
-                    self.bin_arith_op(|x, y| x - y)?;
+                    self.bin_arith_op(|x, y| x - y, "when subtracting")?;
                 }
                 OpCode::Mul => {
-                    self.bin_arith_op(|x, y| x * y)?;
+                    self.bin_arith_op(|x, y| x * y, "when multiplying")?;
                 }
                 OpCode::Div => {
-                    self.bin_arith_op(|x, y| x / y)?;
+                    self.bin_arith_op(|x, y| x / y, "when dividing")?;
                 }
                 OpCode::False => self.stack.push(Value::Bool(false)),
                 OpCode::True => self.stack.push(Value::Bool(true)),
@@ -131,7 +145,9 @@ impl Vm {
                     (Some(_), Some(_)) => {
                         self.runtime_error("Arguments must be of same type and comparable.")?
                     }
-                    _ => self.runtime_error("Error: not enough numbers on stack.")?,
+                    _ => {
+                        self.runtime_error("Error: not enough numbers on stack when comparing >.")?
+                    }
                 },
                 OpCode::GreaterEqual => match (self.stack.pop(), self.stack.pop()) {
                     (Some(Value::Number(b)), Some(Value::Number(a))) => {
@@ -143,7 +159,9 @@ impl Vm {
                     (Some(_), Some(_)) => {
                         self.runtime_error("Arguments must be of same type and comparable.")?
                     }
-                    _ => self.runtime_error("Error: not enough numbers on stack.")?,
+                    _ => {
+                        self.runtime_error("Error: not enough numbers on stack when comparing >=.")?
+                    }
                 },
                 OpCode::Less => match (self.stack.pop(), self.stack.pop()) {
                     (Some(Value::Number(b)), Some(Value::Number(a))) => {
@@ -155,7 +173,9 @@ impl Vm {
                     (Some(_), Some(_)) => {
                         self.runtime_error("Arguments must be of same type and comparable.")?
                     }
-                    _ => self.runtime_error("Error: not enough numbers on stack.")?,
+                    _ => {
+                        self.runtime_error("Error: not enough numbers on stack when comparing <.")?
+                    }
                 },
                 OpCode::LessEqual => match (self.stack.pop(), self.stack.pop()) {
                     (Some(Value::Number(b)), Some(Value::Number(a))) => {
@@ -167,20 +187,24 @@ impl Vm {
                     (Some(_), Some(_)) => {
                         self.runtime_error("Arguments must be of same type and comparable.")?
                     }
-                    _ => self.runtime_error("Error: not enough numbers on stack.")?,
+                    _ => {
+                        self.runtime_error("Error: not enough numbers on stack when comparing <=.")?
+                    }
                 },
                 OpCode::Print => {
                     if let Some(v) = self.stack.pop() {
-                        println!("{}", v);
+                        println!(">  {}", v);
                     } else {
-                        self.runtime_error("Error: not enough numbers on stack.")?
+                        self.runtime_error("Error: not enough numbers on stack when printing.")?
                     }
                 }
                 OpCode::Pop => {
                     self.stack.pop();
                 }
-                OpCode::DefineGlobal(c) => {
-                    if let Value::VString(LoxString { s: name }) = self.chunk.constants[c].clone() {
+                OpCode::DefineGlobal(index) => {
+                    if let Value::VString(LoxString { s: name }) =
+                        self.chunk.constants[index].clone()
+                    {
                         self.globals.insert(name, self.peek(0));
                         self.stack.pop();
                     } else {
@@ -189,8 +213,10 @@ impl Vm {
                         )?
                     }
                 }
-                OpCode::GetGlobal(c) => {
-                    if let Value::VString(LoxString { s: name }) = self.chunk.constants[c].clone() {
+                OpCode::GetGlobal(index) => {
+                    if let Value::VString(LoxString { s: name }) =
+                        self.chunk.constants[index].clone()
+                    {
                         match self.globals.get(&name) {
                             Some(value) => self.stack.push(value.clone()),
                             None => {
@@ -201,8 +227,10 @@ impl Vm {
                         self.runtime_error("Error: Invalid identifier found for usage on stack.")?
                     }
                 }
-                OpCode::SetGlobal(c) => {
-                    if let Value::VString(LoxString { s: name }) = self.chunk.constants[c].clone() {
+                OpCode::SetGlobal(index) => {
+                    if let Value::VString(LoxString { s: name }) =
+                        self.chunk.constants[index].clone()
+                    {
                         if self.globals.insert(name.clone(), self.peek(0)).is_none() {
                             self.globals.remove(&name);
                             self.runtime_error(&format!("Undefined variable '{}'.", name))?
@@ -216,12 +244,28 @@ impl Vm {
                 }
                 OpCode::SetLocal(slot) => {
                     self.stack[slot] = self.peek(0);
-                } // _ => (),
+                }
+                OpCode::JumpIfFalse(offset) => {
+                    if self.peek(0).is_false() {
+                        self.ip += offset;
+                    }
+                }
+                OpCode::Jump(offset) => {
+                    self.ip += offset;
+                }
+                OpCode::Loop(offset) => {
+                    self.ip -= offset + 1;
+                }
+                _ => (),
             }
         }
     }
 
-    fn bin_arith_op(&mut self, f: fn(f64, f64) -> f64) -> Result<(), InterpretError> {
+    fn bin_arith_op(
+        &mut self,
+        f: fn(f64, f64) -> f64,
+        message: &str,
+    ) -> Result<(), InterpretError> {
         match (self.stack.pop(), self.stack.pop()) {
             (Some(Value::Number(b)), Some(Value::Number(a))) => {
                 self.stack.push(Value::Number(f(a, b)));
@@ -234,7 +278,9 @@ impl Vm {
                 self.runtime_error("First argument must be a number.")
             }
             (Some(_), Some(_)) => self.runtime_error("Both arguments must be numbers."),
-            _ => self.runtime_error("Error: not enough numbers on stack."),
+            _ => self.runtime_error(
+                &format!("Error: not enough numbers on stack {}.", message).to_string(),
+            ),
         }
     }
 

@@ -1,18 +1,4 @@
 #V2
-:set debug
-1 + 2;
-1 + 2
-:set debug
-!(5 - 4 > 3 * 2 == !nil)
-1 + 2
-!(5 - 4 > 3 * 2 == !nil)
-:set debug
-!(5 - 4 > 3 * 2 == !nil)
-:set debug
-!(5 - 4 > 3 * 2 == !nil)
-:set debug
-!(5 - 4 > 3 * 2 == !nil)
-:set debug
 !(5 - 4 > 3 * 2 == !nil)
 :set debug
 !(5 - 4 > 3 * 2 == !nil)
@@ -99,3 +85,17 @@ var a = 1;
 { var a = 2; }
 { var a = 2; a = 1; }
 { var a = 2; a = 1; print a; }
+:set debug
+var a = 1;
+if (a > 0) print "A";
+print "s";
+print "sì";
+var a = 1;
+:set debug
+if (a > 0) print "sì";
+if (a > 1) print "sì"; print 3;
+if (a > 1) print "sì";\\nprint 3;
+if (a > 1) print "sì";
+print "sì";
+print "si'";
+print "si";

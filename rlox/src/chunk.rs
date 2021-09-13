@@ -27,13 +27,16 @@ pub enum OpCode {
     SetGlobal(usize),
     GetLocal(usize),
     SetLocal(usize),
+    JumpIfFalse(usize),
+    Jump(usize),
+    Loop(usize),
 }
 
 impl fmt::Display for OpCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             OpCode::Return => write!(f, "OP_RETURN"),
-            OpCode::Constant(c) => write!(f, "OP_CONSTANT {}", c),
+            OpCode::Constant(i) => write!(f, "OP_CONSTANT {}", i),
             OpCode::Negate => write!(f, "OP_NEGATE"),
             OpCode::Add => write!(f, "OP_ADD"),
             OpCode::Sub => write!(f, "OP_SUB"),
@@ -51,11 +54,14 @@ impl fmt::Display for OpCode {
             OpCode::LessEqual => write!(f, "OP_LESS_EQUAL"),
             OpCode::Print => write!(f, "OP_PRINT"),
             OpCode::Pop => write!(f, "OP_POP"),
-            OpCode::DefineGlobal(c) => write!(f, "OP_DEFINE_GLOBAL {}", c),
-            OpCode::GetGlobal(c) => write!(f, "OP_GET_GLOBAL {}", c),
-            OpCode::SetGlobal(c) => write!(f, "OP_SET_GLOBAL {}", c),
-            OpCode::GetLocal(c) => write!(f, "OP_GET_LOCAL {}", c),
-            OpCode::SetLocal(c) => write!(f, "OP_SET_LOCAL {}", c),
+            OpCode::DefineGlobal(i) => write!(f, "OP_DEFINE_GLOBAL {}", i),
+            OpCode::GetGlobal(i) => write!(f, "OP_GET_GLOBAL {}", i),
+            OpCode::SetGlobal(i) => write!(f, "OP_SET_GLOBAL {}", i),
+            OpCode::GetLocal(i) => write!(f, "OP_GET_LOCAL {}", i),
+            OpCode::SetLocal(i) => write!(f, "OP_SET_LOCAL {}", i),
+            OpCode::JumpIfFalse(i) => write!(f, "OP_JUMP_IF_FALSE {}", i),
+            OpCode::Jump(i) => write!(f, "OP_JUMP {}", i),
+            OpCode::Loop(i) => write!(f, "OP_LOOP {}", i),
         }
     }
 }
@@ -164,6 +170,11 @@ pub fn disassemble_instruction(ch: &Chunk, op: OpCode, index: usize) {
         OpCode::DefineGlobal(i) => constant("OP_DEFINE_GLOBAL", ch, i),
         OpCode::GetGlobal(i) => constant("OP_GET_GLOBAL", ch, i),
         OpCode::SetGlobal(i) => constant("OP_SET_GLOBAL", ch, i),
+        OpCode::GetLocal(i) => local("OP_GET_LOCAL", i),
+        OpCode::SetLocal(i) => local("OP_SET_LOCAL", i),
+        OpCode::JumpIfFalse(i) => local("OP_JUMP_IF_FALSE", i),
+        OpCode::Jump(i) => local("OP_JUMP", i),
+        OpCode::Loop(i) => local("OP_LOOP", i),
         // OpCode::Return => println!("{}", op),
         // OpCode::Negate => println!("{}", op),
         // OpCode::Add => println!("{}", op),
@@ -187,4 +198,42 @@ pub fn disassemble_instruction(ch: &Chunk, op: OpCode, index: usize) {
 
 fn constant(name: &str, ch: &Chunk, index: usize) {
     println!("{:<16} {:4} '{}'", name, index, ch.get_constant(index));
+}
+
+fn local(name: &str, index: usize) {
+    println!("{:<16} {:4}\n", name, index)
+}
+
+pub fn disassemble_instruction_str(ch: &Chunk, op: OpCode, index: usize) -> String {
+    let mut content = format!("{:04} ", index);
+    if index > 0 && ch.get_line(index) == ch.get_line(index - 1) {
+        content = format!("{}   | ", content);
+    } else if ch.get_line(index) > 1 {
+        content = format!("\n{}{:4} ", content, ch.get_line(index));
+    } else {
+        content = format!("{}{:4} ", content, ch.get_line(index));
+    }
+    match op {
+        OpCode::Constant(i) => format!("{}{}", content, constant_str("OP_CONSTANT", ch, i)),
+        OpCode::DefineGlobal(i) => {
+            format!("{}{}", content, constant_str("OP_DEFINE_GLOBAL", ch, i))
+        }
+        OpCode::GetGlobal(i) => format!("{}{}", content, constant_str("OP_GET_GLOBAL", ch, i)),
+        OpCode::SetGlobal(i) => format!("{}{}", content, constant_str("OP_SET_GLOBAL", ch, i)),
+        OpCode::GetLocal(i) => format!("{}{}", content, local_str("OP_GET_LOCAL", i)),
+        OpCode::SetLocal(i) => format!("{}{}", content, local_str("OP_SET_LOCAL", i)),
+        OpCode::JumpIfFalse(i) => format!("{}{}", content, local_str("OP_JUMP_IF_FALSE", i)),
+        OpCode::Jump(i) => format!("{}{}", content, local_str("OP_JUMP", i)),
+        OpCode::Loop(i) => format!("{}{}", content, local_str("OP_LOOP", i)),
+
+        _ => format!("{}{}\n", content, op),
+    }
+}
+
+fn constant_str(name: &str, ch: &Chunk, index: usize) -> String {
+    format!("{:<16} {:4} '{}'\n", name, index, ch.get_constant(index))
+}
+
+fn local_str(name: &str, index: usize) -> String {
+    format!("{:<16} {:4}\n", name, index)
 }
