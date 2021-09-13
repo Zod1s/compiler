@@ -1,0 +1,101 @@
+#V2
+1 * 1
+"1" + 1
+1 < 2
+1 < "a"
+"b" < "a"
+"ab" < "a"
+"ab" < "ac"
+"ab" >= "ac"
+"ab" >= "ab"
+"a" < 1
+true < false
+1 < "a"
+1 + "a"
+1 - "a"
+"a" - 1
+true < false
+true < 1
+"a" < 1
+1 * "a"
+true * false
+'a'
+"A" * "B"
+"A" * 1
+.
+*.
+*.*
+1*1.1*1
+1-1
+1/0
+1 / 0
+a
+1 + 1
+?
+(1 + 
+(1 + 2
+(1 + +
+1 + +
+(1 + 2)
+(1 + +)
+* 1
+"a
+cargo
+"Cargo
+"c" > 1
+1 + 2;
+print 1 + 2;
+1 +2 
++2
+1+ 2
+a = 1;
+var a = 1;
+var a = 1
+var a = ;
+var = 1;
+var a = 1;
+var = 1
+var = 1;
+var = 1;a
+var a = 1*;
+var a = 1*!a;
+var a = 1*!"a";
+var a = 1;
+print a;
+var a = 2;
+a =;
+var a = 2;
+a = 1;
+print a = 3;
+1;
+1 + 2;
+var a = 1 + 2;
+print a;
+a
+a:
+a;
+A;
+print "hi";
+print "hi" and 2;
+print "hi" or 2;
+var a = true and false;
+var a = true and false
+var a = true and false;;
+var a = (true and false);
+print 1 and 2;
+var a = 1 and 2;
+print 1 and 2;
+var a = 0;
+a = a+1;
+print 1 and 2;
+print 1 or 2;
+print 1 or (print 3);
+print 1 or (print 3;);
+print 1 or false;
+f();
+var a = 1;
+a();
+var a =1;
+a();
+"ciao"();
+clock();
