@@ -1,2 +1,0 @@
-    Checking rlox v0.1.0 (/mnt/c/Lorenzo/Sviluppo/compiler/rlox)
-    Finished dev [unoptimized + debuginfo] target(s) in 2.04s

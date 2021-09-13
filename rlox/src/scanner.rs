@@ -271,6 +271,15 @@ impl<'a> Token<'a> {
             line,
         }
     }
+
+    pub fn syntethic(lexeme: &'a str) -> Self {
+        Token {
+            token_type: TokenType::Error,
+            lexeme,
+            length: 0,
+            line: 0,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, Copy)]

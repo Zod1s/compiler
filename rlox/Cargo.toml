@@ -7,4 +7,5 @@ edition = "2018"
 
 [dependencies]
 rustyline = "9.0.0"
+cpu-time = "1.0.0"
 # unicode-segmentation = "1.8.0"

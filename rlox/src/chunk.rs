@@ -1,7 +1,7 @@
 use crate::types::Value;
 use std::fmt;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OpCode {
     Return,
     Constant(usize),
@@ -30,6 +30,7 @@ pub enum OpCode {
     JumpIfFalse(usize),
     Jump(usize),
     Loop(usize),
+    Call(usize),
 }
 
 impl fmt::Display for OpCode {
@@ -62,11 +63,12 @@ impl fmt::Display for OpCode {
             OpCode::JumpIfFalse(i) => write!(f, "OP_JUMP_IF_FALSE {}", i),
             OpCode::Jump(i) => write!(f, "OP_JUMP {}", i),
             OpCode::Loop(i) => write!(f, "OP_LOOP {}", i),
+            OpCode::Call(i) => write!(f, "OP_CALL {}", i),
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Chunk {
     pub code: Vec<OpCode>,
     pub constants: Vec<Value>,
@@ -101,11 +103,6 @@ impl Chunk {
     #[inline]
     pub fn get_opcode(&self, index: usize) -> OpCode {
         self.code[index]
-    }
-
-    #[inline]
-    pub fn lines(&self) -> Vec<(usize, usize)> {
-        self.lines.clone()
     }
 
     #[inline]
@@ -175,24 +172,8 @@ pub fn disassemble_instruction(ch: &Chunk, op: OpCode, index: usize) {
         OpCode::JumpIfFalse(i) => local("OP_JUMP_IF_FALSE", i),
         OpCode::Jump(i) => local("OP_JUMP", i),
         OpCode::Loop(i) => local("OP_LOOP", i),
-        // OpCode::Return => println!("{}", op),
-        // OpCode::Negate => println!("{}", op),
-        // OpCode::Add => println!("{}", op),
-        // OpCode::Sub => println!("{}", op),
-        // OpCode::Mul => println!("{}", op),
-        // OpCode::Div => println!("{}", op),
-        // OpCode::True => println!("OP_TRUE"),
-        // OpCode::False => println!("OP_FALSE"),
-        // OpCode::Nil => println!("OP_NIL"),
-        // OpCode::Not => println!("OP_NOT"),
-        // OpCode::Equal => println!("OP_EQUAL"),
-        // OpCode::NotEqual => println!("OP_NOT_EQUAL"),
-        // OpCode::Greater => println!("OP_GREATER"),
-        // OpCode::GreaterEqual => println!("OP_GREATER_EQUAL"),
-        // OpCode::Less => println!("OP_LESS"),
-        // OpCode::LessEqual => println!("OP_LESS_EQUAL"),
-        // OpCode::Print => println!("OP_PRINT"),
-        _ => println!("{}", op), // _ => println!("Unknown opcode, {}", op),
+        OpCode::Call(i) => local("OP_CALL", i),
+        _ => println!("{}", op),
     }
 }
 
@@ -225,6 +206,7 @@ pub fn disassemble_instruction_str(ch: &Chunk, op: OpCode, index: usize) -> Stri
         OpCode::JumpIfFalse(i) => format!("{}{}", content, local_str("OP_JUMP_IF_FALSE", i)),
         OpCode::Jump(i) => format!("{}{}", content, local_str("OP_JUMP", i)),
         OpCode::Loop(i) => format!("{}{}", content, local_str("OP_LOOP", i)),
+        OpCode::Call(i) => format!("{}{}", content, local_str("OP_CALL", i)),
 
         _ => format!("{}{}\n", content, op),
     }
