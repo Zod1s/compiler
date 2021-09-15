@@ -1,4 +1,4 @@
-use crate::object::{Function, LoxString, NativeFn};
+use crate::object::{Closure, Function, LoxString, NativeFn};
 use std::fmt;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -8,7 +8,8 @@ pub enum Value {
     Nil,
     VString(LoxString),
     Function(Function),
-    NativeFn(NativeFn)
+    NativeFn(NativeFn),
+    Closure(Closure),
 }
 
 impl fmt::Display for Value {
@@ -20,23 +21,12 @@ impl fmt::Display for Value {
             Value::VString(s) => write!(f, "\"{}\"", s),
             Value::Function(fun) => write!(f, "{}", fun),
             Value::NativeFn(fun) => write!(f, "{:?}", fun),
+            Value::Closure(c) => write!(f, "{:?}", c),
         }
     }
 }
 
 impl Value {
-    // pub fn is_number(&self) -> bool {
-    //     matches!(self, Value::Number(_))
-    // }
-
-    // pub fn is_bool(&self) -> bool {
-    //     matches!(self, Value::Bool(_))
-    // }
-
-    // pub fn is_nil(&self) -> bool {
-    //     matches!(self, Value::Nil)
-    // }
-
     pub fn is_false(&self) -> bool {
         match self {
             Value::Bool(b) => !b,

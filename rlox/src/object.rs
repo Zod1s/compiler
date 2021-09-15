@@ -1,12 +1,11 @@
-use crate::chunk::Chunk;
-use crate::types::Value;
-use crate::vm::Vm;
+use crate::{chunk::Chunk, types::Value, vm::Vm};
 use std::fmt;
 
 // #[derive(Clone, PartialEq, Debug)]
 // pub enum Object {
 //     LoxString(LoxString),
 //     Function(Function)
+//     Closure(Closure)
 // }
 
 // impl Object {
@@ -16,13 +15,17 @@ use std::fmt;
 //     pub fn function(f: Function) -> Object {
 //         Object::Function(f)
 //     }
+//     pub fn closure(c: Closure) -> Object {
+//         Object::Closure(c)
+//     }
 // }
 
 // impl fmt::Display for Object {
 //     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 //         match self {
 //             Object::LoxString(st) => write!(f, "{}", st),
-//             Object::Function(f) => write!(f, "{}", f),
+//             Object::Function(fun) => write!(f, "{}", fun),
+//             Object::Closure(c) => write!(f, "{}", c),
 //         }
 //     }
 // }
@@ -44,11 +47,24 @@ impl fmt::Display for LoxString {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct FunctionUpvalue {
+    pub index: usize,
+    pub is_local: bool,
+}
+
+impl FunctionUpvalue {
+    pub fn new(index: usize, is_local: bool) -> Self {
+        FunctionUpvalue { index, is_local }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
     pub name: String,
+    pub upvalues: Vec<FunctionUpvalue>,
 }
 
 impl Function {
@@ -57,6 +73,7 @@ impl Function {
             arity: 0,
             chunk: Chunk::new(),
             name,
+            upvalues: Vec::new(),
         }
     }
 }
@@ -85,7 +102,37 @@ impl fmt::Debug for NativeFn {
 }
 
 impl PartialEq for NativeFn {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _: &Self) -> bool {
         false
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Closure {
+    pub function: Function,
+    pub upvalues: Vec<Upvalue>,
+}
+
+impl Closure {
+    pub fn new(function: Function) -> Self {
+        Closure {
+            function,
+            upvalues: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct  Upvalue {
+    pub location: usize,
+    pub closed: Option<Value>,
+}
+
+impl Upvalue {
+    pub fn new(location: usize) -> Self {
+        Upvalue {
+            location,
+            closed: None,
+        }
     }
 }

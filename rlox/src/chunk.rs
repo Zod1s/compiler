@@ -27,10 +27,14 @@ pub enum OpCode {
     SetGlobal(usize),
     GetLocal(usize),
     SetLocal(usize),
+    GetUpvalue(usize),
+    SetUpvalue(usize),
     JumpIfFalse(usize),
     Jump(usize),
     Loop(usize),
     Call(usize),
+    Closure(usize),
+    CloseUpvalue,
 }
 
 impl fmt::Display for OpCode {
@@ -60,10 +64,14 @@ impl fmt::Display for OpCode {
             OpCode::SetGlobal(i) => write!(f, "OP_SET_GLOBAL {}", i),
             OpCode::GetLocal(i) => write!(f, "OP_GET_LOCAL {}", i),
             OpCode::SetLocal(i) => write!(f, "OP_SET_LOCAL {}", i),
+            OpCode::GetUpvalue(i) => write!(f, "OP_GET_UPVALUE {}", i),
+            OpCode::SetUpvalue(i) => write!(f, "OP_SET_UPVALUE {}", i),
             OpCode::JumpIfFalse(i) => write!(f, "OP_JUMP_IF_FALSE {}", i),
             OpCode::Jump(i) => write!(f, "OP_JUMP {}", i),
             OpCode::Loop(i) => write!(f, "OP_LOOP {}", i),
             OpCode::Call(i) => write!(f, "OP_CALL {}", i),
+            OpCode::Closure(i) => write!(f, "OP_CLOSURE {}", i),
+            OpCode::CloseUpvalue => write!(f, "OP_CLOSE_UPVALUE"),
         }
     }
 }
@@ -169,10 +177,13 @@ pub fn disassemble_instruction(ch: &Chunk, op: OpCode, index: usize) {
         OpCode::SetGlobal(i) => constant("OP_SET_GLOBAL", ch, i),
         OpCode::GetLocal(i) => local("OP_GET_LOCAL", i),
         OpCode::SetLocal(i) => local("OP_SET_LOCAL", i),
+        OpCode::GetUpvalue(i) => local("OP_GET_UPVALUE", i),
+        OpCode::SetUpvalue(i) => local("OP_SET_UPVALUE", i),
         OpCode::JumpIfFalse(i) => local("OP_JUMP_IF_FALSE", i),
         OpCode::Jump(i) => local("OP_JUMP", i),
         OpCode::Loop(i) => local("OP_LOOP", i),
         OpCode::Call(i) => local("OP_CALL", i),
+        OpCode::Closure(i) => local("OP_CLOSURE {}", i),
         _ => println!("{}", op),
     }
 }
@@ -189,7 +200,7 @@ pub fn disassemble_instruction_str(ch: &Chunk, op: OpCode, index: usize) -> Stri
     let mut content = format!("{:04} ", index);
     if index > 0 && ch.get_line(index) == ch.get_line(index - 1) {
         content = format!("{}   | ", content);
-    } else if ch.get_line(index) > 1 {
+    } else if ch.get_line(index) > 1 && index > 0 {
         content = format!("\n{}{:4} ", content, ch.get_line(index));
     } else {
         content = format!("{}{:4} ", content, ch.get_line(index));
@@ -203,11 +214,13 @@ pub fn disassemble_instruction_str(ch: &Chunk, op: OpCode, index: usize) -> Stri
         OpCode::SetGlobal(i) => format!("{}{}", content, constant_str("OP_SET_GLOBAL", ch, i)),
         OpCode::GetLocal(i) => format!("{}{}", content, local_str("OP_GET_LOCAL", i)),
         OpCode::SetLocal(i) => format!("{}{}", content, local_str("OP_SET_LOCAL", i)),
+        OpCode::GetUpvalue(i) => format!("{}{}", content, local_str("OP_GET_UPVALUE", i)),
+        OpCode::SetUpvalue(i) => format!("{}{}", content, local_str("OP_SET_UPVALUE", i)),
         OpCode::JumpIfFalse(i) => format!("{}{}", content, local_str("OP_JUMP_IF_FALSE", i)),
         OpCode::Jump(i) => format!("{}{}", content, local_str("OP_JUMP", i)),
         OpCode::Loop(i) => format!("{}{}", content, local_str("OP_LOOP", i)),
         OpCode::Call(i) => format!("{}{}", content, local_str("OP_CALL", i)),
-
+        OpCode::Closure(i) => format!("{}{}", content, local_str("OP_CLOSURE", i)),
         _ => format!("{}{}\n", content, op),
     }
 }

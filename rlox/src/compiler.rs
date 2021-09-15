@@ -1,6 +1,6 @@
 use crate::{
     chunk::{disassemble_chunk, OpCode},
-    object::{Function, FunctionType, LoxString},
+    object::{Function, FunctionType, FunctionUpvalue, LoxString},
     scanner::*,
     types::{InterpretError, Precedence, Value},
 };
@@ -21,7 +21,6 @@ pub struct Parser<'s> {
     scanner: Scanner<'s>,
     had_error: bool,
     panic_mode: bool,
-    debug_mode: bool,
     parse_rules: HashMap<TokenType, ParseRule<'s>>,
     compiler: Box<Compiler<'s>>,
 }
@@ -173,7 +172,6 @@ impl<'s> Parser<'s> {
             scanner: Scanner::new(code),
             had_error: false,
             panic_mode: false,
-            debug_mode: false,
             parse_rules,
             compiler,
         }
@@ -186,7 +184,7 @@ impl<'s> Parser<'s> {
         }
         self.consume(TokenType::Eof, "Expect end of expression.");
         self.emit_return();
-        if self.debug_mode && !self.had_error {
+        if cfg!(feature = "debug") && !self.had_error {
             disassemble_chunk(&self.compiler.function.chunk, "code");
         }
         if self.had_error {
@@ -337,7 +335,11 @@ impl<'s> Parser<'s> {
         self.compiler.scope_depth -= 1;
         for i in (0..self.compiler.locals.len()).rev() {
             if self.compiler.locals[i].depth > self.compiler.scope_depth {
-                self.emit_opcode(OpCode::Pop);
+                if self.compiler.locals[i].is_captured {
+                    self.emit_opcode(OpCode::CloseUpvalue);
+                } else {
+                    self.emit_opcode(OpCode::Pop);
+                }
                 self.compiler.locals.pop();
             } else {
                 break;
@@ -449,6 +451,9 @@ impl<'s> Parser<'s> {
         if let Some(arg) = self.resolve_local(token) {
             set_op = OpCode::SetLocal(arg);
             get_op = OpCode::GetLocal(arg);
+        } else if let Some(arg) = self.resolve_upvalue(token) {
+            set_op = OpCode::SetUpvalue(arg);
+            get_op = OpCode::GetUpvalue(arg);
         } else {
             let arg = self.identifier_constant(token);
             set_op = OpCode::SetGlobal(arg);
@@ -562,7 +567,7 @@ impl<'s> Parser<'s> {
     }
 
     fn synchronize(&mut self) {
-        if self.debug_mode {
+        if cfg!(feature = "debug") {
             println!("Synchronizing...");
         }
         self.panic_mode = false;
@@ -628,18 +633,6 @@ impl<'s> Parser<'s> {
         self.make_constant(Value::VString(LoxString::new(token.lexeme.to_string())))
     }
 
-    fn resolve_local(&mut self, name: Token) -> Option<usize> {
-        for (i, local) in self.compiler.locals.iter().enumerate().rev() {
-            if name.lexeme == local.name.lexeme {
-                if local.depth == -1 {
-                    self.error("Can't read local variable in its own initializer.");
-                }
-                return Some(i);
-            }
-        }
-        None
-    }
-
     fn mark_initialized(&mut self) {
         if self.compiler.scope_depth == 0 {
             return;
@@ -689,7 +682,8 @@ impl<'s> Parser<'s> {
         self.consume(TokenType::LeftBrace, "Expect '{' before function body.");
         self.block();
         let function = self.pop_compiler();
-        self.emit_constant(Value::Function(function));
+        let index = self.make_constant(Value::Function(function));
+        self.emit_opcode(OpCode::Closure(index));
     }
 
     fn push_compiler(&mut self, function_type: FunctionType) {
@@ -730,6 +724,24 @@ impl<'s> Parser<'s> {
         }
         self.consume(TokenType::RightParen, "Expect ')' after arguments.");
         arg_count
+    }
+
+    pub fn resolve_local(&mut self, name: Token) -> Option<usize> {
+        let mut errors: Vec<&str> = Vec::new();
+        let result = self.compiler.resolve_local(name, &mut errors);
+        while let Some(err) = errors.pop() {
+            self.error(err);
+        }
+        result
+    }
+
+    pub fn resolve_upvalue(&mut self, name: Token) -> Option<usize> {
+        let mut errors: Vec<&str> = Vec::new();
+        let result = self.compiler.resolve_upvalue(name, &mut errors);
+        while let Some(err) = errors.pop() {
+            self.error(err);
+        }
+        result
     }
 
     // chunk manipulation
@@ -800,9 +812,8 @@ impl<'s> Parser<'s> {
     }
 }
 
-pub fn compile(code: &str, debug: bool) -> Result<Function, InterpretError> {
+pub fn compile(code: &str) -> Result<Function, InterpretError> {
     let mut parser = Parser::new(code);
-    parser.debug_mode = debug;
     parser.compile()
 }
 
@@ -838,15 +849,56 @@ impl<'a> Compiler<'a> {
         }
         false
     }
+
+    pub fn resolve_local(&mut self, name: Token, errors: &mut Vec<&str>) -> Option<usize> {
+        for (i, local) in self.locals.iter().enumerate().rev() {
+            if name.lexeme == local.name.lexeme {
+                if local.depth == -1 {
+                    errors.push("Can't read local variable in its own initializer.");
+                }
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    pub fn resolve_upvalue(&mut self, name: Token, errors: &mut Vec<&str>) -> Option<usize> {
+        if let Some(env) = self.enclosing.as_mut() {
+            if let Some(index) = env.resolve_local(name, errors) {
+                env.locals[index].is_captured = true;
+                return Some(self.add_upvalue(index, true));
+            }
+            if let Some(index) = env.resolve_upvalue(name, errors) {
+                return Some(self.add_upvalue(index, false));
+            }
+        }
+        None
+    }
+
+    pub fn add_upvalue(&mut self, index: usize, is_local: bool) -> usize {
+        for (i, upvalue) in self.function.upvalues.iter().enumerate() {
+            if upvalue.index == index && is_local == upvalue.is_local {
+                return i;
+            }
+        }
+        let upvalue = FunctionUpvalue::new(index, is_local);
+        self.function.upvalues.push(upvalue);
+        self.function.upvalues.len() - 1
+    }
 }
 
 struct Local<'a> {
     name: Token<'a>,
     depth: isize,
+    is_captured: bool,
 }
 
 impl<'a> Local<'a> {
     pub fn new(name: Token<'a>, depth: isize) -> Self {
-        Local { name, depth }
+        Local {
+            name,
+            depth,
+            is_captured: false,
+        }
     }
 }

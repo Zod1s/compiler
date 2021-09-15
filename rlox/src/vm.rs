@@ -1,27 +1,38 @@
 use crate::{
     chunk::{disassemble_instruction, disassemble_instruction_str, Chunk, OpCode},
     compiler,
-    object::{Function, LoxString, NativeFn},
+    object::{Closure, LoxString, NativeFn, Upvalue},
     types::{InterpretError, Value},
 };
 use cpu_time::ProcessTime;
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, process};
+
+// 25.4.4
+// Use RefCell to enable internal mutability with references in Upvalue
 
 pub struct Vm {
     debug: bool,
     stack: Vec<Value>,
     globals: HashMap<String, Value>,
     frames: Vec<CallFrame>,
+    open_upvalues: Vec<Upvalue>,
     start_time: ProcessTime,
 }
 
+impl Default for Vm {
+    fn default() -> Self {
+        Vm::new()
+    }
+}
+
 impl Vm {
-    pub fn new(debug: bool) -> Self {
+    pub fn new() -> Self {
         let mut vm = Vm {
-            debug,
+            debug: false,
             stack: Vec::new(),
             globals: HashMap::new(),
             frames: Vec::new(),
+            open_upvalues: Vec::new(),
             start_time: ProcessTime::now(),
         };
 
@@ -30,22 +41,51 @@ impl Vm {
         vm
     }
 
-    pub fn interpret(&mut self, code: &str) -> Result<(), InterpretError> {
-        let function = compiler::compile(code, false)?;
-        self.stack.push(Value::Function(function.clone()));
-        // self.frames.push(CallFrame::new(function, 0));
-        self.call(function, 0)?;
-        self.run()
+    pub fn pop(&mut self) -> Value {
+        if let Some(value) = self.stack.pop() {
+            value
+        } else {
+            eprintln!("Error: popping a value from empty stack");
+            process::exit(65);
+        }
     }
 
-    pub fn dump(&mut self, code: &str, out_file: &str) -> Result<(), InterpretError> {
-        let function = compiler::compile(code, false)?;
-        let mut content = String::new();
-        for (i, op) in function.chunk.code.iter().enumerate() {
-            content.push_str(&disassemble_instruction_str(&function.chunk, *op, i));
+    pub fn push(&mut self, value: Value) {
+        self.stack.push(value);
+    }
+
+    pub fn set_at(&mut self, index: usize, value: Value) {
+        if index < self.stack.len() {
+            self.stack[index] = value;
+        } else {
+            eprintln!("Error: setting a value out of stack boundaries");
+            process::exit(65);
         }
-        fs::write(out_file, content).expect("Unable to write to file");
-        Ok(())
+    }
+    pub fn get_at(&self, index: usize) -> Value {
+        if index < self.stack.len() {
+            self.stack[index].clone()
+        } else {
+            eprintln!("Error: getting a value out of stack boundaries");
+            process::exit(65);
+        }
+    }
+
+    pub fn interpret(&mut self, code: &str) -> Result<(), InterpretError> {
+        let function = compiler::compile(code)?;
+        if cfg!(feature = "dump") {
+            let mut content = String::new();
+            for (i, op) in function.chunk.code.iter().enumerate() {
+                content.push_str(&disassemble_instruction_str(&function.chunk, *op, i));
+            }
+            fs::write("./dump.txt", content).expect("Unable to write to file");
+            Ok(())
+        } else {
+            self.push(Value::Function(function.clone()));
+            let closure = Closure::new(function);
+            self.frames.push(CallFrame::new(closure, 0));
+            self.run()
+        }
     }
 
     pub fn run(&mut self) -> Result<(), InterpretError> {
@@ -54,7 +94,7 @@ impl Vm {
                 self.runtime_error("Instruction pointer out of bounds.")?;
             }
             let instruction = self.current_chunk().get_opcode(self.current_frame().ip);
-            if self.debug {
+            if self.debug || cfg!(feature = "debug") {
                 println!("==== Stack content ====");
                 if self.stack.is_empty() {
                     println!("[empty stack]");
@@ -69,53 +109,41 @@ impl Vm {
             }
             self.current_frame_mut().ip += 1;
             match instruction {
-                OpCode::Constant(index) => {
-                    self.stack.push(self.current_chunk().get_constant(index))
-                }
+                OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
                 OpCode::Return => {
-                    if let Some(result) = self.stack.pop() {
-                        let frame = self.frames.pop().unwrap();
-                        if self.frames.len() == 0 {
-                            self.stack.pop();
-                            return Ok(());
-                        } else {
-                            self.stack.truncate(frame.slot);
-                            self.stack.push(result);
-                        }
+                    let result = self.pop();
+                    let frame = self.frames.pop().unwrap();
+                    if self.frames.is_empty() {
+                        self.pop();
+                        return Ok(());
                     } else {
-                        self.runtime_error("Error: empty stack.")?;
+                        self.stack.truncate(frame.slot);
+                        self.push(result);
                     }
                 }
-                OpCode::Negate => match self.stack.pop() {
-                    Some(Value::Number(n)) => {
-                        self.stack.push(Value::Number(-n));
-                    }
-                    Some(_) => {
-                        self.runtime_error("No number found on stack.")?;
+                OpCode::Negate => match self.pop() {
+                    Value::Number(n) => {
+                        self.push(Value::Number(-n));
                     }
                     _ => {
-                        self.runtime_error("Error: empty stack.")?;
+                        self.runtime_error("No number found on stack.")?;
                     }
                 },
-                OpCode::Add => match (self.stack.pop(), self.stack.pop()) {
-                    (Some(Value::Number(b)), Some(Value::Number(a))) => {
-                        self.stack.push(Value::Number(a + b));
+                OpCode::Add => match (self.pop(), self.pop()) {
+                    (Value::Number(b), Value::Number(a)) => {
+                        self.push(Value::Number(a + b));
                     }
-                    (Some(Value::VString(b)), Some(Value::VString(a))) => {
-                        self.stack
-                            .push(Value::VString(LoxString::new(format!("{}{}", a, b))));
+                    (Value::VString(b), Value::VString(a)) => {
+                        self.push(Value::VString(LoxString::new(format!("{}{}", a, b))));
                     }
-                    (Some(Value::VString(b)), Some(Value::Number(a))) => {
-                        self.stack
-                            .push(Value::VString(LoxString::new(format!("{}{}", a, b))));
+                    (Value::VString(b), Value::Number(a)) => {
+                        self.push(Value::VString(LoxString::new(format!("{}{}", a, b))));
                     }
-                    (Some(Value::Number(b)), Some(Value::VString(a))) => {
-                        self.stack
-                            .push(Value::VString(LoxString::new(format!("{}{}", a, b))));
+                    (Value::Number(b), Value::VString(a)) => {
+                        self.push(Value::VString(LoxString::new(format!("{}{}", a, b))));
                     }
-                    (Some(_), Some(_)) => self
+                    _ => self
                         .runtime_error("Arguments must be both numbers or at least one string.")?,
-                    _ => self.runtime_error("Error: not enough numbers on stack when summing.")?,
                 },
                 OpCode::Sub => {
                     self.bin_arith_op(|x, y| x - y, "when subtracting")?;
@@ -126,15 +154,12 @@ impl Vm {
                 OpCode::Div => {
                     self.bin_arith_op(|x, y| x / y, "when dividing")?;
                 }
-                OpCode::False => self.stack.push(Value::Bool(false)),
-                OpCode::True => self.stack.push(Value::Bool(true)),
-                OpCode::Nil => self.stack.push(Value::Nil),
+                OpCode::False => self.push(Value::Bool(false)),
+                OpCode::True => self.push(Value::Bool(true)),
+                OpCode::Nil => self.push(Value::Nil),
                 OpCode::Not => {
-                    if let Some(value) = self.stack.pop() {
-                        self.stack.push(Value::Bool(value.is_false()));
-                    } else {
-                        return self.runtime_error("Empty stack.");
-                    }
+                    let value = self.pop().is_false();
+                    self.push(Value::Bool(value));
                 }
                 OpCode::Equal => {
                     self.bin_op(|x, y| x == y)?;
@@ -142,78 +167,54 @@ impl Vm {
                 OpCode::NotEqual => {
                     self.bin_op(|x, y| x != y)?;
                 }
-                OpCode::Greater => match (self.stack.pop(), self.stack.pop()) {
-                    (Some(Value::Number(b)), Some(Value::Number(a))) => {
-                        self.stack.push(Value::Bool(a > b));
+                OpCode::Greater => match (self.pop(), self.pop()) {
+                    (Value::Number(b), Value::Number(a)) => {
+                        self.push(Value::Bool(a > b));
                     }
-                    (Some(Value::VString(b)), Some(Value::VString(a))) => {
-                        self.stack.push(Value::Bool(a > b));
+                    (Value::VString(b), Value::VString(a)) => {
+                        self.push(Value::Bool(a > b));
                     }
-                    (Some(_), Some(_)) => {
-                        self.runtime_error("Arguments must be of same type and comparable.")?
-                    }
-                    _ => {
-                        self.runtime_error("Error: not enough numbers on stack when comparing >.")?
-                    }
+                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
                 },
-                OpCode::GreaterEqual => match (self.stack.pop(), self.stack.pop()) {
-                    (Some(Value::Number(b)), Some(Value::Number(a))) => {
-                        self.stack.push(Value::Bool(a >= b));
+                OpCode::GreaterEqual => match (self.pop(), self.pop()) {
+                    (Value::Number(b), Value::Number(a)) => {
+                        self.push(Value::Bool(a >= b));
                     }
-                    (Some(Value::VString(b)), Some(Value::VString(a))) => {
-                        self.stack.push(Value::Bool(a >= b));
+                    (Value::VString(b), Value::VString(a)) => {
+                        self.push(Value::Bool(a >= b));
                     }
-                    (Some(_), Some(_)) => {
-                        self.runtime_error("Arguments must be of same type and comparable.")?
-                    }
-                    _ => {
-                        self.runtime_error("Error: not enough numbers on stack when comparing >=.")?
-                    }
+                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
                 },
-                OpCode::Less => match (self.stack.pop(), self.stack.pop()) {
-                    (Some(Value::Number(b)), Some(Value::Number(a))) => {
-                        self.stack.push(Value::Bool(a < b));
+                OpCode::Less => match (self.pop(), self.pop()) {
+                    (Value::Number(b), Value::Number(a)) => {
+                        self.push(Value::Bool(a < b));
                     }
-                    (Some(Value::VString(b)), Some(Value::VString(a))) => {
-                        self.stack.push(Value::Bool(a < b));
+                    (Value::VString(b), Value::VString(a)) => {
+                        self.push(Value::Bool(a < b));
                     }
-                    (Some(_), Some(_)) => {
-                        self.runtime_error("Arguments must be of same type and comparable.")?
-                    }
-                    _ => {
-                        self.runtime_error("Error: not enough numbers on stack when comparing <.")?
-                    }
+                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
                 },
-                OpCode::LessEqual => match (self.stack.pop(), self.stack.pop()) {
-                    (Some(Value::Number(b)), Some(Value::Number(a))) => {
-                        self.stack.push(Value::Bool(a <= b));
+                OpCode::LessEqual => match (self.pop(), self.pop()) {
+                    (Value::Number(b), Value::Number(a)) => {
+                        self.push(Value::Bool(a <= b));
                     }
-                    (Some(Value::VString(b)), Some(Value::VString(a))) => {
-                        self.stack.push(Value::Bool(a <= b));
+                    (Value::VString(b), Value::VString(a)) => {
+                        self.push(Value::Bool(a <= b));
                     }
-                    (Some(_), Some(_)) => {
-                        self.runtime_error("Arguments must be of same type and comparable.")?
-                    }
-                    _ => {
-                        self.runtime_error("Error: not enough numbers on stack when comparing <=.")?
-                    }
+                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
                 },
                 OpCode::Print => {
-                    if let Some(v) = self.stack.pop() {
-                        println!(">  {}", v);
-                    } else {
-                        self.runtime_error("Error: not enough numbers on stack when printing.")?
-                    }
+                    println!(">  {}", self.pop());
                 }
                 OpCode::Pop => {
-                    self.stack.pop();
+                    self.pop();
                 }
                 OpCode::DefineGlobal(index) => {
                     if let Value::VString(LoxString { s: name }) =
                         self.current_chunk().constants[index].clone()
                     {
                         self.globals.insert(name, self.peek(0));
-                        self.stack.pop();
+                        self.pop();
                     } else {
                         self.runtime_error(
                             "Error: Invalid identifier found for definition on stack.",
@@ -225,7 +226,10 @@ impl Vm {
                         self.current_chunk().constants[index].clone()
                     {
                         match self.globals.get(&name) {
-                            Some(value) => self.stack.push(value.clone()),
+                            Some(value) => {
+                                let value = value.clone();
+                                self.push(value)
+                            }
                             None => {
                                 self.runtime_error(&format!("Undefined variable '{}'.", name))?
                             }
@@ -247,12 +251,34 @@ impl Vm {
                     }
                 }
                 OpCode::GetLocal(slot) => {
-                    self.stack
-                        .push(self.stack[slot + self.current_frame().slot].clone());
+                    self.push(self.get_at(slot + self.current_frame().slot));
                 }
                 OpCode::SetLocal(slot) => {
+                    // let upvalue = self.current_closure().upvalues[slot];
+                    // let value = self.peek(0);
+                    // if upvalue.closed.is_none() {
+                    //     self.stack[upvalue.location] = value;
+                    // } else {
+                    //     upvalue.closed = Some(value);
+                    // }
+                    let value = self.peek(0);
+                    let index = self.current_closure().upvalues[slot].location;
+                    self.set_at(index, value);
+                }
+                OpCode::GetUpvalue(slot) => {
+                    let value = {
+                        let upvalue = self.current_closure().upvalues[slot].clone();
+                        if let Some(value) = upvalue.closed {
+                            value
+                        } else {
+                            self.get_at(upvalue.location)
+                        }
+                    };
+                    self.push(value);
+                }
+                OpCode::SetUpvalue(slot) => {
                     let index = slot + self.current_frame().slot;
-                    self.stack[index] = self.peek(0);
+                    self.set_at(index, self.peek(0));
                 }
                 OpCode::JumpIfFalse(offset) => {
                     if self.peek(0).is_false() {
@@ -267,6 +293,31 @@ impl Vm {
                 }
                 OpCode::Call(arg_count) => {
                     self.call_value(self.peek(arg_count), arg_count)?;
+                }
+
+                OpCode::Closure(index) => match self.current_chunk().get_constant(index) {
+                    Value::Function(function) => {
+                        let upvalue_count = function.upvalues.len();
+                        let mut closure = Closure::new(function);
+
+                        for i in 0..upvalue_count {
+                            let upvalue = closure.function.upvalues[i];
+                            let value = if upvalue.is_local {
+                                self.capture_upvalue(self.current_frame().slot + upvalue.index)
+                            } else {
+                                self.current_closure().upvalues[upvalue.index].clone()
+                            };
+                            closure.upvalues.push(value);
+                        }
+
+                        self.push(Value::Closure(closure));
+                    }
+                    _ => self.runtime_error("Error: no function found.")?,
+                },
+                OpCode::CloseUpvalue => {
+                    let top = self.stack.len() - 1;
+                    self.close_upvalue(top);
+                    self.pop();
                 } // _ => (),
             }
         }
@@ -277,30 +328,21 @@ impl Vm {
         f: fn(f64, f64) -> f64,
         message: &str,
     ) -> Result<(), InterpretError> {
-        match (self.stack.pop(), self.stack.pop()) {
-            (Some(Value::Number(b)), Some(Value::Number(a))) => {
-                self.stack.push(Value::Number(f(a, b)));
+        match (self.pop(), self.pop()) {
+            (Value::Number(b), Value::Number(a)) => {
+                self.push(Value::Number(f(a, b)));
                 Ok(())
             }
-            (Some(_), Some(Value::Number(_))) => {
-                self.runtime_error("Second argument must be a number.")
-            }
-            (Some(Value::Number(_)), Some(_)) => {
-                self.runtime_error("First argument must be a number.")
-            }
-            (Some(_), Some(_)) => self.runtime_error("Both arguments must be numbers."),
-            _ => self.runtime_error(&format!("Error: not enough numbers on stack {}.", message)),
+            (_, Value::Number(_)) => self.runtime_error(&format!("Second argument must be a number {}.", message).to_string()),
+            (Value::Number(_), _) => self.runtime_error(&format!("First argument must be a number {}.", message).to_string()),
+            _ => self.runtime_error(&format!("Both arguments must be numbers {}.", message).to_string()),
         }
     }
 
     fn bin_op(&mut self, f: fn(Value, Value) -> bool) -> Result<(), InterpretError> {
-        match (self.stack.pop(), self.stack.pop()) {
-            (Some(b), Some(a)) => {
-                self.stack.push(Value::Bool(f(a, b)));
-                Ok(())
-            }
-            _ => self.runtime_error("Error: not enough values on stack."),
-        }
+        let (b, a) = (self.pop(), self.pop());
+        self.push(Value::Bool(f(a, b)));
+        Ok(())
     }
 
     fn runtime_error(&mut self, message: &str) -> Result<(), InterpretError> {
@@ -313,8 +355,8 @@ impl Vm {
         for frame in self.frames.iter().rev() {
             eprintln!(
                 "[line {}] in {}",
-                frame.function.chunk.get_line(frame.ip - 1),
-                frame.function.name
+                frame.closure.function.chunk.get_line(frame.ip - 1),
+                frame.closure.function.name
             );
         }
 
@@ -331,11 +373,15 @@ impl Vm {
     }
 
     fn peek(&self, index: usize) -> Value {
-        self.stack[self.stack.len() - 1 - index].clone()
+        self.get_at(self.stack.len() - 1 - index)
     }
 
     fn current_frame(&self) -> &CallFrame {
         self.frames.last().unwrap()
+    }
+
+    fn current_closure(&self) -> &Closure {
+        &self.current_frame().closure
     }
 
     fn current_frame_mut(&mut self) -> &mut CallFrame {
@@ -343,26 +389,29 @@ impl Vm {
     }
 
     fn current_chunk(&self) -> &Chunk {
-        &self.current_frame().function.chunk
+        &self.current_frame().closure.function.chunk
     }
 
     fn call_value(&mut self, callee: Value, arg_count: usize) -> Result<(), InterpretError> {
         match callee {
-            Value::Function(fun) => self.call(fun, arg_count),
             Value::NativeFn(fun) => {
                 let left = self.stack.len() - arg_count;
                 let result = fun.0(&self, &self.stack[left..]);
                 self.stack.truncate(left - 1);
-                self.stack.push(result);
+                self.push(result);
                 Ok(())
             }
+            Value::Closure(fun) => self.call(fun, arg_count),
             _ => self.runtime_error("Can only call functions and classes."),
         }
     }
 
-    fn call(&mut self, callee: Function, arg_count: usize) -> Result<(), InterpretError> {
-        if callee.arity != arg_count {
-            let msg = format!("Expected {} arguments but got {}.", callee.arity, arg_count);
+    fn call(&mut self, callee: Closure, arg_count: usize) -> Result<(), InterpretError> {
+        if callee.function.arity != arg_count {
+            let msg = format!(
+                "Expected {} arguments but got {}.",
+                callee.function.arity, arg_count
+            );
             self.runtime_error(&msg)
         } else {
             let frame = CallFrame::new(callee, self.stack.len() - arg_count - 1);
@@ -374,18 +423,43 @@ impl Vm {
     fn define_native(&mut self, name: String, function: NativeFn) {
         self.globals.insert(name, Value::NativeFn(function));
     }
+
+    fn capture_upvalue(&mut self, index: usize) -> Upvalue {
+        for upvalue in &self.open_upvalues {
+            if upvalue.location == index {
+                return upvalue.clone();
+            }
+        }
+        let upvalue = Upvalue::new(index);
+        self.open_upvalues.push(upvalue.clone());
+        upvalue
+    }
+
+    fn close_upvalue(&mut self, last: usize) {
+        let mut i = 0;
+        while i < self.open_upvalues.len() {
+            let mut upvalue = self.open_upvalues[i].clone();
+            if upvalue.location >= last {
+                self.open_upvalues.remove(i);
+                let location = upvalue.location;
+                upvalue.closed = Some(self.get_at(location));
+            } else {
+                i += 1;
+            }
+        }
+    }
 }
 
 struct CallFrame {
-    function: Function,
+    closure: Closure,
     ip: usize,
     slot: usize,
 }
 
 impl CallFrame {
-    pub fn new(function: Function, slot: usize) -> Self {
+    pub fn new(closure: Closure, slot: usize) -> Self {
         CallFrame {
-            function,
+            closure,
             ip: 0,
             slot,
         }

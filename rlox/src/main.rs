@@ -27,39 +27,12 @@ use vm::Vm;
 fn main() {
     let args = env::args().collect::<Vec<String>>();
     match args.len() {
-        1 => repl(Vm::new(false)),
-        2 => run_file(&args[1], Vm::new(false)),
-        3 => {
-            if &args[2] == "debug" {
-                run_file(&args[1], Vm::new(true))
-            } else if &args[2] == "dump" {
-                dump(&args[1], "./dump.txt", Vm::new(false));
-            } else {
-                eprintln!("Needs one argument, that is file name, or no arguments");
-                process::exit(1);
-            }
-        }
+        1 => repl(Vm::new()),
+        2 => run_file(&args[1], Vm::new()),
         _ => {
             eprintln!("Needs one argument, that is file name, or no arguments");
             process::exit(1);
         }
-    }
-}
-
-pub fn dump(in_file: &str, out_file: &str, mut vm: Vm) {
-    let program = fs::read_to_string(in_file).expect("File not found");
-    match vm.dump(&program, out_file) {
-        Err(InterpretError::Runtime) => {
-            println!("Error while running.");
-            drop(vm);
-            process::exit(70);
-        }
-        Err(InterpretError::Compile) => {
-            println!("Error while compiling.");
-            drop(vm);
-            process::exit(65);
-        }
-        _ => (),
     }
 }
 
