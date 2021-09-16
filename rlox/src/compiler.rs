@@ -4,7 +4,7 @@ use crate::{
     scanner::*,
     types::{InterpretError, Precedence, Value},
 };
-use std::{collections::HashMap, mem};
+use std::{collections::HashMap, mem}; //, rc::Rc, cell::{RefCell, Ref}};
 
 type ParseFn<'s> = fn(&mut Parser<'s>, can_assign: bool) -> ();
 
@@ -341,8 +341,6 @@ impl<'s> Parser<'s> {
                     self.emit_opcode(OpCode::Pop);
                 }
                 self.compiler.locals.pop();
-            } else {
-                break;
             }
         }
     }
@@ -868,7 +866,7 @@ impl<'a> Compiler<'a> {
                 env.locals[index].is_captured = true;
                 return Some(self.add_upvalue(index, true));
             }
-            if let Some(index) = env.resolve_upvalue(name, errors) {
+            else if let Some(index) = env.resolve_upvalue(name, errors) {
                 return Some(self.add_upvalue(index, false));
             }
         }

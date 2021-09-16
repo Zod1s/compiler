@@ -1,5 +1,5 @@
 use crate::{chunk::Chunk, types::Value, vm::Vm};
-use std::fmt;
+use std::fmt; //, rc::Rc, cell::{RefCell, Ref}};
 
 // #[derive(Clone, PartialEq, Debug)]
 // pub enum Object {
@@ -123,7 +123,7 @@ impl Closure {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct  Upvalue {
+pub struct Upvalue {
     pub location: usize,
     pub closed: Option<Value>,
 }

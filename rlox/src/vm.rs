@@ -5,10 +5,10 @@ use crate::{
     types::{InterpretError, Value},
 };
 use cpu_time::ProcessTime;
-use std::{collections::HashMap, fs, process};
+use std::{collections::HashMap, fs, process}; //, rc::Rc, cell::{RefCell, Ref}};
 
 // 25.4.4
-// Use RefCell to enable internal mutability with references in Upvalue
+// Use RefCell to enable internal mutability with references in Upvalue, using also Rc to count references
 
 pub struct Vm {
     debug: bool,
@@ -62,11 +62,11 @@ impl Vm {
             process::exit(65);
         }
     }
-    pub fn get_at(&self, index: usize) -> Value {
+    pub fn get_at(&self, index: usize, line: &str) -> Value {
         if index < self.stack.len() {
             self.stack[index].clone()
         } else {
-            eprintln!("Error: getting a value out of stack boundaries");
+            eprintln!("Error: getting a value out of stack boundaries at {}", line);
             process::exit(65);
         }
     }
@@ -113,8 +113,8 @@ impl Vm {
                 OpCode::Return => {
                     let result = self.pop();
                     let frame = self.frames.pop().unwrap();
+                    self.close_upvalue(frame.slot, "116");
                     if self.frames.is_empty() {
-                        self.pop();
                         return Ok(());
                     } else {
                         self.stack.truncate(frame.slot);
@@ -251,19 +251,11 @@ impl Vm {
                     }
                 }
                 OpCode::GetLocal(slot) => {
-                    self.push(self.get_at(slot + self.current_frame().slot));
+                    self.push(self.get_at(slot + self.current_frame().slot, "255"));
                 }
                 OpCode::SetLocal(slot) => {
-                    // let upvalue = self.current_closure().upvalues[slot];
-                    // let value = self.peek(0);
-                    // if upvalue.closed.is_none() {
-                    //     self.stack[upvalue.location] = value;
-                    // } else {
-                    //     upvalue.closed = Some(value);
-                    // }
-                    let value = self.peek(0);
-                    let index = self.current_closure().upvalues[slot].location;
-                    self.set_at(index, value);
+                    let index = slot + self.current_frame().slot;
+                    self.set_at(index, self.peek(0));
                 }
                 OpCode::GetUpvalue(slot) => {
                     let value = {
@@ -271,14 +263,20 @@ impl Vm {
                         if let Some(value) = upvalue.closed {
                             value
                         } else {
-                            self.get_at(upvalue.location)
+                            self.get_at(upvalue.location, "267")
                         }
                     };
                     self.push(value);
                 }
                 OpCode::SetUpvalue(slot) => {
-                    let index = slot + self.current_frame().slot;
-                    self.set_at(index, self.peek(0));
+                    let is_closed = self.current_closure().upvalues[slot].closed.is_none();
+                    let value = self.peek(0);
+                    if is_closed {
+                        let location = self.current_closure().upvalues[slot].location;
+                        self.stack[location] = value;
+                    } else {
+                        self.current_closure_mut().upvalues[slot].closed = Some(value);
+                    }
                 }
                 OpCode::JumpIfFalse(offset) => {
                     if self.peek(0).is_false() {
@@ -316,7 +314,7 @@ impl Vm {
                 },
                 OpCode::CloseUpvalue => {
                     let top = self.stack.len() - 1;
-                    self.close_upvalue(top);
+                    self.close_upvalue(top, "318");
                     self.pop();
                 } // _ => (),
             }
@@ -333,9 +331,14 @@ impl Vm {
                 self.push(Value::Number(f(a, b)));
                 Ok(())
             }
-            (_, Value::Number(_)) => self.runtime_error(&format!("Second argument must be a number {}.", message).to_string()),
-            (Value::Number(_), _) => self.runtime_error(&format!("First argument must be a number {}.", message).to_string()),
-            _ => self.runtime_error(&format!("Both arguments must be numbers {}.", message).to_string()),
+            (_, Value::Number(_)) => self.runtime_error(
+                &format!("Second argument must be a number {}.", message).to_string(),
+            ),
+            (Value::Number(_), _) => self.runtime_error(
+                &format!("First argument must be a number {}.", message).to_string(),
+            ),
+            _ => self
+                .runtime_error(&format!("Both arguments must be numbers {}.", message).to_string()),
         }
     }
 
@@ -373,7 +376,7 @@ impl Vm {
     }
 
     fn peek(&self, index: usize) -> Value {
-        self.get_at(self.stack.len() - 1 - index)
+        self.get_at(self.stack.len() - 1 - index, "380")
     }
 
     fn current_frame(&self) -> &CallFrame {
@@ -382,6 +385,10 @@ impl Vm {
 
     fn current_closure(&self) -> &Closure {
         &self.current_frame().closure
+    }
+
+    fn current_closure_mut(&mut self) -> &mut Closure {
+        &mut self.current_frame_mut().closure
     }
 
     fn current_frame_mut(&mut self) -> &mut CallFrame {
@@ -435,14 +442,12 @@ impl Vm {
         upvalue
     }
 
-    fn close_upvalue(&mut self, last: usize) {
+    fn close_upvalue(&mut self, last: usize, line: &str) {
         let mut i = 0;
         while i < self.open_upvalues.len() {
-            let mut upvalue = self.open_upvalues[i].clone();
-            if upvalue.location >= last {
-                self.open_upvalues.remove(i);
-                let location = upvalue.location;
-                upvalue.closed = Some(self.get_at(location));
+            if self.open_upvalues[i].location >= last {
+                let mut upvalue = self.open_upvalues.remove(i);
+                upvalue.closed = Some(self.get_at(i, &format!("450, {}", line)));
             } else {
                 i += 1;
             }
