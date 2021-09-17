@@ -276,7 +276,7 @@ impl<'a> Token<'a> {
         Token {
             token_type: TokenType::Error,
             lexeme,
-            length: 0,
+            length: lexeme.len(),
             line: 0,
         }
     }
@@ -329,7 +329,6 @@ pub enum TokenType {
 
     Error,
     Eof,
-    None,
 }
 
 impl fmt::Display for TokenType {
@@ -377,7 +376,6 @@ impl fmt::Display for TokenType {
             TokenType::While => write!(f, "       While"),
             TokenType::Error => write!(f, "       Error"),
             TokenType::Eof => write!(f, "         Eof"),
-            TokenType::None => write!(f, "        None"),
         }
     }
 }

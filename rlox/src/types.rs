@@ -1,5 +1,11 @@
 use crate::object::{Closure, Function, LoxString, NativeFn};
-use std::fmt; //, rc::Rc, cell::{RefCell, Ref}};
+use std::{cell::RefCell, fmt, rc::Rc};
+
+pub type MutRef<T> = Rc<RefCell<T>>;
+
+pub fn new_mutref<T>(value: T) -> MutRef<T> {
+    Rc::new(RefCell::new(value))
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Value {

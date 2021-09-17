@@ -2,20 +2,17 @@ use crate::{
     chunk::{disassemble_instruction, disassemble_instruction_str, Chunk, OpCode},
     compiler,
     object::{Closure, LoxString, NativeFn, Upvalue},
-    types::{InterpretError, Value},
+    types::{new_mutref, InterpretError, MutRef, Value},
 };
 use cpu_time::ProcessTime;
-use std::{collections::HashMap, fs, process}; //, rc::Rc, cell::{RefCell, Ref}};
-
-// 25.4.4
-// Use RefCell to enable internal mutability with references in Upvalue, using also Rc to count references
+use std::{collections::HashMap, fs, process, rc::Rc};
 
 pub struct Vm {
     debug: bool,
     stack: Vec<Value>,
     globals: HashMap<String, Value>,
     frames: Vec<CallFrame>,
-    open_upvalues: Vec<Upvalue>,
+    open_upvalues: Vec<MutRef<Upvalue>>,
     start_time: ProcessTime,
 }
 
@@ -54,23 +51,6 @@ impl Vm {
         self.stack.push(value);
     }
 
-    pub fn set_at(&mut self, index: usize, value: Value) {
-        if index < self.stack.len() {
-            self.stack[index] = value;
-        } else {
-            eprintln!("Error: setting a value out of stack boundaries");
-            process::exit(65);
-        }
-    }
-    pub fn get_at(&self, index: usize, line: &str) -> Value {
-        if index < self.stack.len() {
-            self.stack[index].clone()
-        } else {
-            eprintln!("Error: getting a value out of stack boundaries at {}", line);
-            process::exit(65);
-        }
-    }
-
     pub fn interpret(&mut self, code: &str) -> Result<(), InterpretError> {
         let function = compiler::compile(code)?;
         if cfg!(feature = "dump") {
@@ -90,9 +70,6 @@ impl Vm {
 
     pub fn run(&mut self) -> Result<(), InterpretError> {
         loop {
-            if self.current_frame().ip >= self.current_chunk().code.len() {
-                self.runtime_error("Instruction pointer out of bounds.")?;
-            }
             let instruction = self.current_chunk().get_opcode(self.current_frame().ip);
             if self.debug || cfg!(feature = "debug") {
                 println!("==== Stack content ====");
@@ -107,13 +84,15 @@ impl Vm {
                 disassemble_instruction(self.current_chunk(), instruction, self.current_frame().ip);
                 println!();
             }
+
             self.current_frame_mut().ip += 1;
+
             match instruction {
                 OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
                 OpCode::Return => {
-                    let result = self.pop();
                     let frame = self.frames.pop().unwrap();
-                    self.close_upvalue(frame.slot, "116");
+                    let result = self.pop();
+                    self.close_upvalue(frame.slot);
                     if self.frames.is_empty() {
                         return Ok(());
                     } else {
@@ -251,31 +230,30 @@ impl Vm {
                     }
                 }
                 OpCode::GetLocal(slot) => {
-                    self.push(self.get_at(slot + self.current_frame().slot, "255"));
+                    self.push(self.stack[slot + self.current_frame().slot].clone());
                 }
                 OpCode::SetLocal(slot) => {
                     let index = slot + self.current_frame().slot;
-                    self.set_at(index, self.peek(0));
+                    self.stack[index] = self.peek(0);
                 }
                 OpCode::GetUpvalue(slot) => {
                     let value = {
-                        let upvalue = self.current_closure().upvalues[slot].clone();
-                        if let Some(value) = upvalue.closed {
+                        let upvalue = self.current_closure().upvalues[slot].borrow();
+                        if let Some(value) = upvalue.closed.clone() {
                             value
                         } else {
-                            self.get_at(upvalue.location, "267")
+                            self.stack[upvalue.location].clone()
                         }
                     };
                     self.push(value);
                 }
                 OpCode::SetUpvalue(slot) => {
-                    let is_closed = self.current_closure().upvalues[slot].closed.is_none();
+                    let upvalue = Rc::clone(&self.current_closure().upvalues[slot]);
                     let value = self.peek(0);
-                    if is_closed {
-                        let location = self.current_closure().upvalues[slot].location;
-                        self.stack[location] = value;
+                    if upvalue.borrow().closed.is_none() {
+                        self.stack[upvalue.borrow().location] = value;
                     } else {
-                        self.current_closure_mut().upvalues[slot].closed = Some(value);
+                        upvalue.borrow_mut().closed = Some(value);
                     }
                 }
                 OpCode::JumpIfFalse(offset) => {
@@ -303,7 +281,7 @@ impl Vm {
                             let value = if upvalue.is_local {
                                 self.capture_upvalue(self.current_frame().slot + upvalue.index)
                             } else {
-                                self.current_closure().upvalues[upvalue.index].clone()
+                                Rc::clone(&self.current_closure().upvalues[upvalue.index])
                             };
                             closure.upvalues.push(value);
                         }
@@ -314,7 +292,7 @@ impl Vm {
                 },
                 OpCode::CloseUpvalue => {
                     let top = self.stack.len() - 1;
-                    self.close_upvalue(top, "318");
+                    self.close_upvalue(top);
                     self.pop();
                 } // _ => (),
             }
@@ -331,14 +309,13 @@ impl Vm {
                 self.push(Value::Number(f(a, b)));
                 Ok(())
             }
-            (_, Value::Number(_)) => self.runtime_error(
-                &format!("Second argument must be a number {}.", message).to_string(),
-            ),
-            (Value::Number(_), _) => self.runtime_error(
-                &format!("First argument must be a number {}.", message).to_string(),
-            ),
-            _ => self
-                .runtime_error(&format!("Both arguments must be numbers {}.", message).to_string()),
+            (_, Value::Number(_)) => {
+                self.runtime_error(&format!("Second argument must be a number {}.", message))
+            }
+            (Value::Number(_), _) => {
+                self.runtime_error(&format!("First argument must be a number {}.", message))
+            }
+            _ => self.runtime_error(&format!("Both arguments must be numbers {}.", message)),
         }
     }
 
@@ -376,7 +353,7 @@ impl Vm {
     }
 
     fn peek(&self, index: usize) -> Value {
-        self.get_at(self.stack.len() - 1 - index, "380")
+        self.stack[self.stack.len() - 1 - index].clone()
     }
 
     fn current_frame(&self) -> &CallFrame {
@@ -385,10 +362,6 @@ impl Vm {
 
     fn current_closure(&self) -> &Closure {
         &self.current_frame().closure
-    }
-
-    fn current_closure_mut(&mut self) -> &mut Closure {
-        &mut self.current_frame_mut().closure
     }
 
     fn current_frame_mut(&mut self) -> &mut CallFrame {
@@ -403,7 +376,7 @@ impl Vm {
         match callee {
             Value::NativeFn(fun) => {
                 let left = self.stack.len() - arg_count;
-                let result = fun.0(&self, &self.stack[left..]);
+                let result = fun.0(self, &self.stack[left..]);
                 self.stack.truncate(left - 1);
                 self.push(result);
                 Ok(())
@@ -431,23 +404,25 @@ impl Vm {
         self.globals.insert(name, Value::NativeFn(function));
     }
 
-    fn capture_upvalue(&mut self, index: usize) -> Upvalue {
+    fn capture_upvalue(&mut self, index: usize) -> MutRef<Upvalue> {
         for upvalue in &self.open_upvalues {
-            if upvalue.location == index {
-                return upvalue.clone();
+            if upvalue.borrow().location == index {
+                return Rc::clone(upvalue);
             }
         }
-        let upvalue = Upvalue::new(index);
-        self.open_upvalues.push(upvalue.clone());
+        let upvalue = new_mutref(Upvalue::new(index));
+        self.open_upvalues.push(Rc::clone(&upvalue));
         upvalue
     }
 
-    fn close_upvalue(&mut self, last: usize, line: &str) {
+    fn close_upvalue(&mut self, last: usize) {
         let mut i = 0;
-        while i < self.open_upvalues.len() {
-            if self.open_upvalues[i].location >= last {
-                let mut upvalue = self.open_upvalues.remove(i);
-                upvalue.closed = Some(self.get_at(i, &format!("450, {}", line)));
+        while i != self.open_upvalues.len() {
+            let upvalue = Rc::clone(&self.open_upvalues[i]);
+            let location = upvalue.borrow().location;
+            if location >= last {
+                self.open_upvalues.remove(i);
+                upvalue.borrow_mut().closed = Some(self.stack[location].clone());
             } else {
                 i += 1;
             }

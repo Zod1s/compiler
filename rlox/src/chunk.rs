@@ -183,7 +183,7 @@ pub fn disassemble_instruction(ch: &Chunk, op: OpCode, index: usize) {
         OpCode::Jump(i) => local("OP_JUMP", i),
         OpCode::Loop(i) => local("OP_LOOP", i),
         OpCode::Call(i) => local("OP_CALL", i),
-        OpCode::Closure(i) => local("OP_CLOSURE {}", i),
+        OpCode::Closure(i) => constant("OP_CLOSURE {}", ch, i),
         _ => println!("{}", op),
     }
 }
@@ -220,7 +220,7 @@ pub fn disassemble_instruction_str(ch: &Chunk, op: OpCode, index: usize) -> Stri
         OpCode::Jump(i) => format!("{}{}", content, local_str("OP_JUMP", i)),
         OpCode::Loop(i) => format!("{}{}", content, local_str("OP_LOOP", i)),
         OpCode::Call(i) => format!("{}{}", content, local_str("OP_CALL", i)),
-        OpCode::Closure(i) => format!("{}{}", content, local_str("OP_CLOSURE", i)),
+        OpCode::Closure(i) => format!("{}{}", content, constant_str("OP_CLOSURE", ch, i)),
         _ => format!("{}{}\n", content, op),
     }
 }

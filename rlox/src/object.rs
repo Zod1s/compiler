@@ -1,34 +1,9 @@
-use crate::{chunk::Chunk, types::Value, vm::Vm};
-use std::fmt; //, rc::Rc, cell::{RefCell, Ref}};
-
-// #[derive(Clone, PartialEq, Debug)]
-// pub enum Object {
-//     LoxString(LoxString),
-//     Function(Function)
-//     Closure(Closure)
-// }
-
-// impl Object {
-//     pub fn string(st: LoxString) -> Object {
-//         Object::LoxString(st)
-//     }
-//     pub fn function(f: Function) -> Object {
-//         Object::Function(f)
-//     }
-//     pub fn closure(c: Closure) -> Object {
-//         Object::Closure(c)
-//     }
-// }
-
-// impl fmt::Display for Object {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match self {
-//             Object::LoxString(st) => write!(f, "{}", st),
-//             Object::Function(fun) => write!(f, "{}", fun),
-//             Object::Closure(c) => write!(f, "{}", c),
-//         }
-//     }
-// }
+use crate::{
+    chunk::Chunk,
+    types::{MutRef, Value},
+    vm::Vm,
+};
+use std::fmt;
 
 #[derive(Clone, PartialEq, Debug, PartialOrd)]
 pub struct LoxString {
@@ -56,6 +31,12 @@ pub struct FunctionUpvalue {
 impl FunctionUpvalue {
     pub fn new(index: usize, is_local: bool) -> Self {
         FunctionUpvalue { index, is_local }
+    }
+}
+
+impl fmt::Display for FunctionUpvalue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "index: {}, local: {}", self.index, self.is_local)
     }
 }
 
@@ -110,7 +91,7 @@ impl PartialEq for NativeFn {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Closure {
     pub function: Function,
-    pub upvalues: Vec<Upvalue>,
+    pub upvalues: Vec<MutRef<Upvalue>>,
 }
 
 impl Closure {
