@@ -167,8 +167,8 @@ impl<'s> Parser<'s> {
         let compiler = Compiler::new("script".to_string(), FunctionType::Script);
 
         Parser {
-            current: Token::new(TokenType::None, "None", 4, 0),
-            previous: Token::new(TokenType::None, "None", 4, 0),
+            current: Token::syntethic(""),
+            previous: Token::syntethic(""),
             scanner: Scanner::new(code),
             had_error: false,
             panic_mode: false,
@@ -177,7 +177,7 @@ impl<'s> Parser<'s> {
         }
     }
 
-    fn compile(&mut self) -> Result<Function, InterpretError> {
+    fn compile(mut self) -> Result<Function, InterpretError> {
         self.advance();
         while !self.match_token(TokenType::Eof) {
             self.declaration();
@@ -190,7 +190,7 @@ impl<'s> Parser<'s> {
         if self.had_error {
             Err(InterpretError::Compile)
         } else {
-            Ok(self.compiler.function.clone())
+            Ok(self.compiler.function)
         }
     }
 
@@ -221,12 +221,7 @@ impl<'s> Parser<'s> {
 
     fn parse_precedence(&mut self, precedence: Precedence) {
         self.advance();
-        let prefix_rule = match self
-            .parse_rules
-            .get(&self.previous.token_type)
-            .unwrap_or_else(|| panic!("No parse rule found for {}.", self.previous.token_type))
-            .prefix
-        {
+        let prefix_rule = match self.get_rule(&self.previous.token_type).prefix {
             None => {
                 self.error("Expected expression.");
                 return;
@@ -237,20 +232,9 @@ impl<'s> Parser<'s> {
         let can_assign = precedence <= Precedence::Assignment;
         prefix_rule(self, can_assign);
 
-        while precedence
-            <= self
-                .parse_rules
-                .get(&self.current.token_type)
-                .unwrap()
-                .precedence
-        {
+        while precedence <= self.get_rule(&self.current.token_type).precedence {
             self.advance();
-            let infix_rule = self
-                .parse_rules
-                .get(&self.previous.token_type)
-                .unwrap()
-                .infix
-                .unwrap();
+            let infix_rule = self.get_rule(&self.previous.token_type).infix.unwrap();
             infix_rule(self, can_assign);
         }
 
@@ -287,7 +271,7 @@ impl<'s> Parser<'s> {
     }
 
     fn fun_declaration(&mut self) {
-        let global: usize = self.parse_variable("Expect variable name.");
+        let global = self.parse_variable("Expect variable name.");
         self.mark_initialized();
         self.function(FunctionType::Function);
         self.define_variable(global);
@@ -341,8 +325,6 @@ impl<'s> Parser<'s> {
                     self.emit_opcode(OpCode::Pop);
                 }
                 self.compiler.locals.pop();
-            } else {
-                break;
             }
         }
     }
@@ -497,7 +479,7 @@ impl<'s> Parser<'s> {
 
     fn binary(&mut self, _can_assign: bool) {
         let op_type = self.previous.token_type;
-        let rule = self.parse_rules.get(&op_type).cloned().unwrap();
+        let rule = self.get_rule(&op_type).clone();
         self.parse_precedence(rule.precedence.next());
         match op_type {
             TokenType::Plus => self.emit_opcode(OpCode::Add),
@@ -744,6 +726,10 @@ impl<'s> Parser<'s> {
         result
     }
 
+    fn get_rule(&self, key: &TokenType) -> &ParseRule<'s> {
+        self.parse_rules.get(key).unwrap()
+    }
+
     // chunk manipulation
 
     fn emit_opcode(&mut self, opcode: OpCode) {
@@ -813,7 +799,7 @@ impl<'s> Parser<'s> {
 }
 
 pub fn compile(code: &str) -> Result<Function, InterpretError> {
-    let mut parser = Parser::new(code);
+    let parser = Parser::new(code);
     parser.compile()
 }
 
@@ -867,8 +853,7 @@ impl<'a> Compiler<'a> {
             if let Some(index) = env.resolve_local(name, errors) {
                 env.locals[index].is_captured = true;
                 return Some(self.add_upvalue(index, true));
-            }
-            if let Some(index) = env.resolve_upvalue(name, errors) {
+            } else if let Some(index) = env.resolve_upvalue(name, errors) {
                 return Some(self.add_upvalue(index, false));
             }
         }

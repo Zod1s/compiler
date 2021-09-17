@@ -9,8 +9,6 @@
 )]
 // #![deny(clippy::all)]
 
-// use clap
-
 mod chunk;
 mod compiler;
 // mod hashmap;
