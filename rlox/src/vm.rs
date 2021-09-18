@@ -2,7 +2,7 @@ use crate::{
     chunk::{Chunk, Disassembler, OpCode},
     compiler,
     gc::{Gc, GcRef, GcTrace, GcTraceFormatter},
-    object::{Closure, Function, LoxString, NativeFn, Upvalue},
+    object::*,
     types::{InterpretError, Table, Value},
 };
 use cpu_time::ProcessTime;
@@ -324,6 +324,50 @@ impl Vm {
                     let top = self.stack.len() - 1;
                     self.close_upvalue(top);
                     self.pop();
+                }
+                OpCode::Class(value) => {
+                    if let Value::VString(name) = self.current_chunk().constants[value] {
+                        let class = Class::new(name);
+                        let class = self.alloc(class);
+                        self.push(Value::Class(class));
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::GetProperty(slot) => {
+                    if let Value::Instance(instance) = self.peek(0) {
+                        let instance = self.gc.deref(instance);
+                        if let Value::VString(name) = self.current_chunk().get_constant(slot) {
+                            let value = instance.fields.get(&name);
+                            if let Some(&value) = value {
+                                self.pop();
+                                self.push(value);
+                            }
+                        } else {
+                            self.runtime_error(
+                                "Error: Invalid identifier found for usage on stack.",
+                            )?
+                        }
+                    } else {
+                        self.runtime_error("Only instances have properties.")?
+                    }
+                }
+                OpCode::SetProperty(slot) => {
+                    if let Value::Instance(instance) = self.peek(1) {
+                        if let Value::VString(name) = self.current_chunk().get_constant(slot) {
+                            let value = self.pop();
+                            let instance = self.gc.deref_mut(instance);
+                            instance.fields.insert(name, value);
+                            self.pop();
+                            self.push(value);
+                        } else {
+                            self.runtime_error(
+                                "Error: Invalid identifier found for usage on stack.",
+                            )?
+                        }
+                    } else {
+                        self.runtime_error("Only instances have properties.")?
+                    }
                 } // _ => (),
             }
         }
@@ -416,6 +460,14 @@ impl Vm {
                 Ok(())
             }
             Value::Closure(fun) => self.call(fun, arg_count),
+            Value::Class(cls) => {
+                let instance = Instance::new(cls);
+                let instance = self.alloc(instance);
+                let index = self.stack.len() - arg_count - 1;
+                self.stack[index] = Value::Instance(instance);
+
+                Ok(())
+            }
             _ => self.runtime_error("Can only call functions and classes."),
         }
     }

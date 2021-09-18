@@ -1,6 +1,6 @@
 use crate::{
     gc::{Gc, GcRef, GcTrace},
-    object::{Closure, Function, LoxString, NativeFn},
+    object::*,
 };
 use std::{any::Any, collections::HashMap, fmt};
 
@@ -13,6 +13,8 @@ pub enum Value {
     Function(GcRef<Function>),
     NativeFn(NativeFn),
     Closure(GcRef<Closure>),
+    Class(GcRef<Class>),
+    Instance(GcRef<Instance>),
 }
 
 impl GcTrace for Value {
@@ -25,6 +27,8 @@ impl GcTrace for Value {
             Value::Function(value) => gc.deref(*value).format(f, gc),
             Value::NativeFn(_) => write!(f, "<native fn>"),
             Value::Closure(value) => gc.deref(*value).format(f, gc),
+            Value::Class(value) => gc.deref(*value).format(f, gc),
+            Value::Instance(value) => gc.deref(*value).format(f, gc),
         }
     }
 

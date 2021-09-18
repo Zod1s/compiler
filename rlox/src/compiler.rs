@@ -50,7 +50,7 @@ impl<'s> Parser<'s> {
         rule(TokenType::LeftBrace, None, None, Precedence::None);
         rule(TokenType::RightBrace, None, None, Precedence::None);
         rule(TokenType::Comma, None, None, Precedence::None);
-        // rule(TokenType::Dot, None, Some(Parser::dot), Precedence::Call);
+        rule(TokenType::Dot, None, Some(Parser::dot), Precedence::Call);
         rule(
             TokenType::Minus,
             Some(Parser::unary),
@@ -252,6 +252,8 @@ impl<'s> Parser<'s> {
             self.var_declaration();
         } else if self.match_token(TokenType::Fun) {
             self.fun_declaration();
+        } else if self.match_token(TokenType::Class) {
+            self.class_declaration();
         } else {
             self.statement();
         }
@@ -275,10 +277,20 @@ impl<'s> Parser<'s> {
     }
 
     fn fun_declaration(&mut self) {
-        let global = self.parse_variable("Expect variable name.");
+        let global = self.parse_variable("Expected variable name.");
         self.mark_initialized();
         self.function(FunctionType::Function);
         self.define_variable(global);
+    }
+
+    fn class_declaration(&mut self) {
+        self.consume(TokenType::Identifier, "Expected class name.");
+        let name_constant = self.identifier_constant(self.previous);
+        self.declare_varible();
+        self.emit_opcode(OpCode::Class(name_constant));
+        self.define_variable(name_constant);
+        self.consume(TokenType::LeftBrace, "Expected '{' after statement");
+        self.consume(TokenType::RightBrace, "Expected '}' after statement");
     }
 
     fn statement(&mut self) {
@@ -535,6 +547,18 @@ impl<'s> Parser<'s> {
     fn call(&mut self, _can_assign: bool) {
         let arg_count = self.argument_list();
         self.emit_opcode(OpCode::Call(arg_count));
+    }
+
+    fn dot(&mut self, can_assign: bool) {
+        self.consume(TokenType::Identifier, "Expected property name after '.'.");
+        let name = self.identifier_constant(self.previous);
+        if can_assign && self.match_token(TokenType::Equal) {
+            self.expression();
+            self.emit_opcode(OpCode::SetProperty(name));
+        } else {
+            self.emit_opcode(OpCode::GetProperty(name));
+
+        }
     }
 
     // helpers

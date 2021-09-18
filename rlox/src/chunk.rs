@@ -2,7 +2,7 @@ use crate::{
     gc::{Gc, GcTraceFormatter},
     types::Value,
 };
-use std::fmt;
+// use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OpCode {
@@ -38,46 +38,50 @@ pub enum OpCode {
     Call(usize),
     Closure(usize),
     CloseUpvalue,
+    Class(usize),
+    SetProperty(usize),
+    GetProperty(usize),
 }
 
-impl fmt::Display for OpCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            OpCode::Return => write!(f, "OP_RETURN"),
-            OpCode::Constant(i) => write!(f, "OP_CONSTANT {}", i),
-            OpCode::Negate => write!(f, "OP_NEGATE"),
-            OpCode::Add => write!(f, "OP_ADD"),
-            OpCode::Sub => write!(f, "OP_SUB"),
-            OpCode::Mul => write!(f, "OP_MUL"),
-            OpCode::Div => write!(f, "OP_DIV"),
-            OpCode::True => write!(f, "OP_TRUE"),
-            OpCode::False => write!(f, "OP_FALSE"),
-            OpCode::Nil => write!(f, "OP_NIL"),
-            OpCode::Not => write!(f, "OP_NOT"),
-            OpCode::Equal => write!(f, "OP_EQUAL"),
-            OpCode::NotEqual => write!(f, "OP_NOT_EQUAL"),
-            OpCode::Greater => write!(f, "OP_GREATER"),
-            OpCode::GreaterEqual => write!(f, "OP_GREATER_EQUAL"),
-            OpCode::Less => write!(f, "OP_LESS"),
-            OpCode::LessEqual => write!(f, "OP_LESS_EQUAL"),
-            OpCode::Print => write!(f, "OP_PRINT"),
-            OpCode::Pop => write!(f, "OP_POP"),
-            OpCode::DefineGlobal(i) => write!(f, "OP_DEFINE_GLOBAL {}", i),
-            OpCode::GetGlobal(i) => write!(f, "OP_GET_GLOBAL {}", i),
-            OpCode::SetGlobal(i) => write!(f, "OP_SET_GLOBAL {}", i),
-            OpCode::GetLocal(i) => write!(f, "OP_GET_LOCAL {}", i),
-            OpCode::SetLocal(i) => write!(f, "OP_SET_LOCAL {}", i),
-            OpCode::GetUpvalue(i) => write!(f, "OP_GET_UPVALUE {}", i),
-            OpCode::SetUpvalue(i) => write!(f, "OP_SET_UPVALUE {}", i),
-            OpCode::JumpIfFalse(i) => write!(f, "OP_JUMP_IF_FALSE {}", i),
-            OpCode::Jump(i) => write!(f, "OP_JUMP {}", i),
-            OpCode::Loop(i) => write!(f, "OP_LOOP {}", i),
-            OpCode::Call(i) => write!(f, "OP_CALL {}", i),
-            OpCode::Closure(i) => write!(f, "OP_CLOSURE {}", i),
-            OpCode::CloseUpvalue => write!(f, "OP_CLOSE_UPVALUE"),
-        }
-    }
-}
+// impl fmt::Display for OpCode {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         match self {
+//             OpCode::Return => write!(f, "OP_RETURN"),
+//             OpCode::Constant(i) => write!(f, "OP_CONSTANT {}", i),
+//             OpCode::Negate => write!(f, "OP_NEGATE"),
+//             OpCode::Add => write!(f, "OP_ADD"),
+//             OpCode::Sub => write!(f, "OP_SUB"),
+//             OpCode::Mul => write!(f, "OP_MUL"),
+//             OpCode::Div => write!(f, "OP_DIV"),
+//             OpCode::True => write!(f, "OP_TRUE"),
+//             OpCode::False => write!(f, "OP_FALSE"),
+//             OpCode::Nil => write!(f, "OP_NIL"),
+//             OpCode::Not => write!(f, "OP_NOT"),
+//             OpCode::Equal => write!(f, "OP_EQUAL"),
+//             OpCode::NotEqual => write!(f, "OP_NOT_EQUAL"),
+//             OpCode::Greater => write!(f, "OP_GREATER"),
+//             OpCode::GreaterEqual => write!(f, "OP_GREATER_EQUAL"),
+//             OpCode::Less => write!(f, "OP_LESS"),
+//             OpCode::LessEqual => write!(f, "OP_LESS_EQUAL"),
+//             OpCode::Print => write!(f, "OP_PRINT"),
+//             OpCode::Pop => write!(f, "OP_POP"),
+//             OpCode::DefineGlobal(i) => write!(f, "OP_DEFINE_GLOBAL {}", i),
+//             OpCode::GetGlobal(i) => write!(f, "OP_GET_GLOBAL {}", i),
+//             OpCode::SetGlobal(i) => write!(f, "OP_SET_GLOBAL {}", i),
+//             OpCode::GetLocal(i) => write!(f, "OP_GET_LOCAL {}", i),
+//             OpCode::SetLocal(i) => write!(f, "OP_SET_LOCAL {}", i),
+//             OpCode::GetUpvalue(i) => write!(f, "OP_GET_UPVALUE {}", i),
+//             OpCode::SetUpvalue(i) => write!(f, "OP_SET_UPVALUE {}", i),
+//             OpCode::JumpIfFalse(i) => write!(f, "OP_JUMP_IF_FALSE {}", i),
+//             OpCode::Jump(i) => write!(f, "OP_JUMP {}", i),
+//             OpCode::Loop(i) => write!(f, "OP_LOOP {}", i),
+//             OpCode::Call(i) => write!(f, "OP_CALL {}", i),
+//             OpCode::Closure(i) => write!(f, "OP_CLOSURE {}", i),
+//             OpCode::CloseUpvalue => write!(f, "OP_CLOSE_UPVALUE"),
+//             OpCode::Class(i) => write!(f, "OP_CLASS {}", i),
+//         }
+//     }
+// }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Chunk {
@@ -232,6 +236,16 @@ impl<'s> Disassembler<'s> {
                 string,
                 self.value_instruction_to_string("OP_SET_UPVALUE", *value)
             ),
+            OpCode::GetProperty(value) => format!(
+                "{}{}",
+                string,
+                self.const_instruction_to_string("OP_GET_PROPERTY", *value)
+            ),
+            OpCode::SetProperty(value) => format!(
+                "{}{}",
+                string,
+                self.const_instruction_to_string("OP_SET_PROPERTY", *value)
+            ),
             OpCode::JumpIfFalse(value) => format!(
                 "{}{}",
                 string,
@@ -257,6 +271,13 @@ impl<'s> Disassembler<'s> {
                     "{}{}",
                     string,
                     self.const_instruction_to_string("OP_CLOSURE", *value)
+                )
+            }
+            OpCode::Class(value) => {
+                format!(
+                    "{}{}",
+                    string,
+                    self.const_instruction_to_string("OP_CLASS", *value)
                 )
             }
             OpCode::Return => format!("{}{}", string, "OP_RETURN"),
@@ -337,11 +358,14 @@ impl<'s> Disassembler<'s> {
             OpCode::SetLocal(value) => self.value_instruction("OP_SET_LOCAL", *value),
             OpCode::GetUpvalue(value) => self.value_instruction("OP_GET_UPVALUE", *value),
             OpCode::SetUpvalue(value) => self.value_instruction("OP_SET_UPVALUE", *value),
+            OpCode::GetProperty(value) => self.const_instruction("OP_GET_PROPERTY", *value),
+            OpCode::SetProperty(value) => self.const_instruction("OP_SET_PROPERTY", *value),
             OpCode::JumpIfFalse(value) => self.value_instruction("OP_JUMP_IF_FALSE", *value),
             OpCode::Jump(value) => self.value_instruction("OP_JUMP", *value),
             OpCode::Loop(value) => self.value_instruction("OP_LOOP", *value),
             OpCode::Call(value) => println!("{:<16} {:4}", "OP_CALL", *value),
             OpCode::Closure(value) => self.const_instruction("OP_CLOSURE", *value),
+            OpCode::Class(value) => self.const_instruction("OP_CLASS", *value),
             OpCode::Return => println!("OP_RETURN"),
             OpCode::Negate => println!("OP_NEGATE"),
             OpCode::Add => println!("OP_ADD"),

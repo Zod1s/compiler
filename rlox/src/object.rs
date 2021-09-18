@@ -1,7 +1,7 @@
 use crate::{
     chunk::{Chunk, OpCode},
     gc::{Gc, GcRef, GcTrace},
-    types::Value,
+    types::{Value, Table},
     vm::Vm,
 };
 use std::{any::Any, fmt, mem};
@@ -211,6 +211,80 @@ impl GcTrace for Upvalue {
         if let Some(obj) = self.closed {
             gc.mark_value(obj)
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct Class {
+    pub name: GcRef<LoxString>,
+}
+
+impl Class {
+    pub fn new(name: GcRef<LoxString>) -> Self {
+        Class { name }
+    }
+}
+
+impl GcTrace for Class {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        let name = gc.deref(self.name);
+        write!(f, "{}", name)
+    }
+
+    fn size(&self) -> usize {
+        mem::size_of::<Class>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_object(self.name);
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct Instance {
+    pub class: GcRef<Class>,
+    pub fields: Table
+}
+
+impl Instance {
+    pub fn new(class: GcRef<Class>) -> Self {
+        Instance {
+            class,
+            fields: Table::new(),
+        }
+    }
+}
+
+impl GcTrace for Instance {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        let class = gc.deref(self.class);
+        let name = gc.deref(class.name);
+        write!(f, "{} instance", name)
+    }
+
+    fn size(&self) -> usize {
+        mem::size_of::<Class>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_object(self.class);
+        gc.mark_table(&self.fields);
     }
 
     fn as_any(&self) -> &dyn Any {
