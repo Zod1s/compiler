@@ -1,4 +1,7 @@
-use crate::types::Value;
+use crate::{
+    gc::{Gc, GcTraceFormatter},
+    types::Value,
+};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -115,7 +118,7 @@ impl Chunk {
 
     #[inline]
     pub fn get_constant(&self, index: usize) -> Value {
-        self.constants[index].clone()
+        self.constants[index]
     }
 
     pub fn add_constant(&mut self, value: Value) -> usize {
@@ -154,81 +157,245 @@ impl Chunk {
     }
 }
 
-pub fn disassemble_chunk(ch: &Chunk, name: &str) {
-    println!("======== {} ========", name);
-
-    for (i, c) in ch.code().iter().enumerate() {
-        disassemble_instruction(ch, *c, i);
-    }
-    println!();
+pub struct Disassembler<'s> {
+    pub gc: &'s Gc,
+    pub chunk: &'s Chunk,
+    pub stack: Option<&'s Vec<Value>>,
 }
 
-pub fn disassemble_instruction(ch: &Chunk, op: OpCode, index: usize) {
-    print!("{:04} ", index);
-    if index > 0 && ch.get_line(index) == ch.get_line(index - 1) {
-        print!("   | ");
-    } else {
-        print!("{:4} ", ch.get_line(index));
+impl<'s> Disassembler<'s> {
+    pub fn new(gc: &'s Gc, chunk: &'s Chunk, stack: Option<&'s Vec<Value>>) -> Self {
+        Disassembler { gc, chunk, stack }
     }
-    match op {
-        OpCode::Constant(i) => constant("OP_CONSTANT", ch, i),
-        OpCode::DefineGlobal(i) => constant("OP_DEFINE_GLOBAL", ch, i),
-        OpCode::GetGlobal(i) => constant("OP_GET_GLOBAL", ch, i),
-        OpCode::SetGlobal(i) => constant("OP_SET_GLOBAL", ch, i),
-        OpCode::GetLocal(i) => local("OP_GET_LOCAL", i),
-        OpCode::SetLocal(i) => local("OP_SET_LOCAL", i),
-        OpCode::GetUpvalue(i) => local("OP_GET_UPVALUE", i),
-        OpCode::SetUpvalue(i) => local("OP_SET_UPVALUE", i),
-        OpCode::JumpIfFalse(i) => local("OP_JUMP_IF_FALSE", i),
-        OpCode::Jump(i) => local("OP_JUMP", i),
-        OpCode::Loop(i) => local("OP_LOOP", i),
-        OpCode::Call(i) => local("OP_CALL", i),
-        OpCode::Closure(i) => constant("OP_CLOSURE {}", ch, i),
-        _ => println!("{}", op),
-    }
-}
 
-fn constant(name: &str, ch: &Chunk, index: usize) {
-    println!("{:<16} {:4} '{}'", name, index, ch.get_constant(index));
-}
-
-fn local(name: &str, index: usize) {
-    println!("{:<16} {:4}\n", name, index)
-}
-
-pub fn disassemble_instruction_str(ch: &Chunk, op: OpCode, index: usize) -> String {
-    let mut content = format!("{:04} ", index);
-    if index > 0 && ch.get_line(index) == ch.get_line(index - 1) {
-        content = format!("{}   | ", content);
-    } else if ch.get_line(index) > 1 && index > 0 {
-        content = format!("\n{}{:4} ", content, ch.get_line(index));
-    } else {
-        content = format!("{}{:4} ", content, ch.get_line(index));
-    }
-    match op {
-        OpCode::Constant(i) => format!("{}{}", content, constant_str("OP_CONSTANT", ch, i)),
-        OpCode::DefineGlobal(i) => {
-            format!("{}{}", content, constant_str("OP_DEFINE_GLOBAL", ch, i))
+    pub fn disassemble_to_string(&self, name: &str) -> String {
+        let mut string = String::new();
+        string = format!("{}{}", string, format!("=== BEGIN {} ===\n", name));
+        for (i, op) in self.chunk.code.iter().enumerate() {
+            string = format!(
+                "{}{}\n",
+                string,
+                self.disassemble_instruction_to_string(op, i)
+            );
         }
-        OpCode::GetGlobal(i) => format!("{}{}", content, constant_str("OP_GET_GLOBAL", ch, i)),
-        OpCode::SetGlobal(i) => format!("{}{}", content, constant_str("OP_SET_GLOBAL", ch, i)),
-        OpCode::GetLocal(i) => format!("{}{}", content, local_str("OP_GET_LOCAL", i)),
-        OpCode::SetLocal(i) => format!("{}{}", content, local_str("OP_SET_LOCAL", i)),
-        OpCode::GetUpvalue(i) => format!("{}{}", content, local_str("OP_GET_UPVALUE", i)),
-        OpCode::SetUpvalue(i) => format!("{}{}", content, local_str("OP_SET_UPVALUE", i)),
-        OpCode::JumpIfFalse(i) => format!("{}{}", content, local_str("OP_JUMP_IF_FALSE", i)),
-        OpCode::Jump(i) => format!("{}{}", content, local_str("OP_JUMP", i)),
-        OpCode::Loop(i) => format!("{}{}", content, local_str("OP_LOOP", i)),
-        OpCode::Call(i) => format!("{}{}", content, local_str("OP_CALL", i)),
-        OpCode::Closure(i) => format!("{}{}", content, constant_str("OP_CLOSURE", ch, i)),
-        _ => format!("{}{}\n", content, op),
+        string = format!("{}{}", string, format!("=== END {} ===\n\n", name));
+        string
     }
-}
 
-fn constant_str(name: &str, ch: &Chunk, index: usize) -> String {
-    format!("{:<16} {:4} '{}'\n", name, index, ch.get_constant(index))
-}
+    fn disassemble_instruction_to_string(&self, instruction: &OpCode, offset: usize) -> String {
+        let mut string = String::new();
+        string = format!("{}{:04} ", string, offset);
+        let line = self.chunk.get_line(offset);
+        if offset > 0 && line == self.chunk.get_line(offset - 1) {
+            string = format!("{}   | ", string);
+        } else {
+            string = format!("{}{:>4} ", string, line);
+        }
+        match instruction {
+            OpCode::Constant(value) => format!(
+                "{}{}",
+                string,
+                self.const_instruction_to_string("OP_CONSTANT", *value)
+            ),
+            OpCode::DefineGlobal(value) => format!(
+                "{}{}",
+                string,
+                self.const_instruction_to_string("OP_DEFINE_GLOBAL", *value)
+            ),
+            OpCode::GetGlobal(value) => format!(
+                "{}{}",
+                string,
+                self.const_instruction_to_string("OP_GET_GLOBAL", *value)
+            ),
+            OpCode::SetGlobal(value) => format!(
+                "{}{}",
+                string,
+                self.const_instruction_to_string("OP_SET_GLOBAL", *value)
+            ),
+            OpCode::GetLocal(value) => format!(
+                "{}{}",
+                string,
+                self.value_instruction_to_string("OP_GET_LOCAL", *value)
+            ),
+            OpCode::SetLocal(value) => format!(
+                "{}{}",
+                string,
+                self.value_instruction_to_string("OP_SET_LOCAL", *value)
+            ),
+            OpCode::GetUpvalue(value) => format!(
+                "{}{}",
+                string,
+                self.value_instruction_to_string("OP_GET_UPVALUE", *value)
+            ),
+            OpCode::SetUpvalue(value) => format!(
+                "{}{}",
+                string,
+                self.value_instruction_to_string("OP_SET_UPVALUE", *value)
+            ),
+            OpCode::JumpIfFalse(value) => format!(
+                "{}{}",
+                string,
+                self.value_instruction_to_string("OP_JUMP_IF_FALSE", *value)
+            ),
+            OpCode::Jump(value) => {
+                format!(
+                    "{}{}",
+                    string,
+                    self.value_instruction_to_string("OP_JUMP", *value)
+                )
+            }
+            OpCode::Loop(value) => {
+                format!(
+                    "{}{}",
+                    string,
+                    self.value_instruction_to_string("OP_LOOP", *value)
+                )
+            }
+            OpCode::Call(value) => format!("{}{:<16} {:4}", string, "OP_CALL", *value),
+            OpCode::Closure(value) => {
+                format!(
+                    "{}{}",
+                    string,
+                    self.const_instruction_to_string("OP_CLOSURE", *value)
+                )
+            }
+            OpCode::Return => format!("{}{}", string, "OP_RETURN"),
+            OpCode::Negate => format!("{}{}", string, "OP_NEGATE"),
+            OpCode::Add => format!("{}{}", string, "OP_ADD"),
+            OpCode::Sub => format!("{}{}", string, "OP_SUB"),
+            OpCode::Mul => format!("{}{}", string, "OP_MUL"),
+            OpCode::Div => format!("{}{}", string, "OP_DIV"),
+            OpCode::True => format!("{}{}", string, "OP_TRUE"),
+            OpCode::False => format!("{}{}", string, "OP_FALSE"),
+            OpCode::Nil => format!("{}{}", string, "OP_NIL"),
+            OpCode::Not => format!("{}{}", string, "OP_NOT"),
+            OpCode::Equal => format!("{}{}", string, "OP_EQUAL"),
+            OpCode::NotEqual => format!("{}{}", string, "OP_NOT_EQUAL"),
+            OpCode::Greater => format!("{}{}", string, "OP_GREATER"),
+            OpCode::GreaterEqual => format!("{}{}", string, "OP_GREATER_EQUAL"),
+            OpCode::Less => format!("{}{}", string, "OP_LESS"),
+            OpCode::LessEqual => format!("{}{}", string, "OP_LESS_EQUAL"),
+            OpCode::Print => format!("{}{}", string, "OP_PRINT"),
+            OpCode::Pop => format!("{}{}", string, "OP_POP"),
+            OpCode::CloseUpvalue => format!("{}{}", string, "OP_CLOSE_UPVALUE"),
+        }
+    }
 
-fn local_str(name: &str, index: usize) -> String {
-    format!("{:<16} {:4}\n", name, index)
+    // fn stack_to_string(&self) -> String {
+    //     let mut string = String::new();
+    //     if let Some(stack) = self.stack {
+    //         string = format!("{}Stack: ", string);
+    //         for &value in stack.iter() {
+    //             string = format!(
+    //                 "{}[{}]",
+    //                 string,
+    //                 crate::gc::GcTraceFormatter::new(value, self.gc)
+    //             );
+    //         }
+    //         string.push('\n');
+    //     }
+    //     string
+    // }
+
+    fn const_instruction_to_string(&self, instruction: &str, index: usize) -> String {
+        let value = self.chunk.get_constant(index);
+        format!(
+            "{:<16} {:4} {}",
+            instruction,
+            index,
+            GcTraceFormatter::new(value, self.gc)
+        )
+    }
+
+    fn value_instruction_to_string(&self, instruction: &str, index: usize) -> String {
+        format!("{:<16} {:4}", instruction, index)
+    }
+
+    pub fn disassemble(&self, name: &str) {
+        println!("=== BEGIN {} ===", name);
+        for (i, op) in self.chunk.code.iter().enumerate() {
+            self.disassemble_instruction(op, i);
+        }
+        println!("=== END {} ===\n", name);
+    }
+
+    pub fn disassemble_instruction(&self, instruction: &OpCode, offset: usize) {
+        self.stack();
+        print!("{:04} ", offset);
+        let line = self.chunk.get_line(offset);
+        if offset > 0 && line == self.chunk.get_line(offset - 1) {
+            print!("   | ");
+        } else {
+            print!("{:>4} ", line);
+        }
+        match instruction {
+            OpCode::Constant(value) => self.const_instruction("OP_CONSTANT", *value),
+            OpCode::DefineGlobal(value) => self.const_instruction("OP_DEFINE_GLOBAL", *value),
+            OpCode::GetGlobal(value) => self.const_instruction("OP_GET_GLOBAL", *value),
+            OpCode::SetGlobal(value) => self.const_instruction("OP_SET_GLOBAL", *value),
+            OpCode::GetLocal(value) => self.value_instruction("OP_GET_LOCAL", *value),
+            OpCode::SetLocal(value) => self.value_instruction("OP_SET_LOCAL", *value),
+            OpCode::GetUpvalue(value) => self.value_instruction("OP_GET_UPVALUE", *value),
+            OpCode::SetUpvalue(value) => self.value_instruction("OP_SET_UPVALUE", *value),
+            OpCode::JumpIfFalse(value) => self.value_instruction("OP_JUMP_IF_FALSE", *value),
+            OpCode::Jump(value) => self.value_instruction("OP_JUMP", *value),
+            OpCode::Loop(value) => self.value_instruction("OP_LOOP", *value),
+            OpCode::Call(value) => println!("{:<16} {:4}", "OP_CALL", *value),
+            OpCode::Closure(value) => self.const_instruction("OP_CLOSURE", *value),
+            OpCode::Return => println!("OP_RETURN"),
+            OpCode::Negate => println!("OP_NEGATE"),
+            OpCode::Add => println!("OP_ADD"),
+            OpCode::Sub => println!("OP_SUB"),
+            OpCode::Mul => println!("OP_MUL"),
+            OpCode::Div => println!("OP_DIV"),
+            OpCode::True => println!("OP_TRUE"),
+            OpCode::False => println!("OP_FALSE"),
+            OpCode::Nil => println!("OP_NIL"),
+            OpCode::Not => println!("OP_NOT"),
+            OpCode::Equal => println!("OP_EQUAL"),
+            OpCode::NotEqual => println!("OP_NOT_EQUAL"),
+            OpCode::Greater => println!("OP_GREATER"),
+            OpCode::GreaterEqual => println!("OP_GREATER_EQUAL"),
+            OpCode::Less => println!("OP_LESS"),
+            OpCode::LessEqual => println!("OP_LESS_EQUAL"),
+            OpCode::Print => println!("OP_PRINT"),
+            OpCode::Pop => println!("OP_POP"),
+            OpCode::CloseUpvalue => println!("OP_CLOSE_UPVALUE"),
+        }
+    }
+
+    fn stack(&self) {
+        if let Some(stack) = self.stack {
+            print!("Stack: ");
+            for &value in stack.iter() {
+                print!("[{}]", crate::gc::GcTraceFormatter::new(value, self.gc));
+            }
+            println!();
+        }
+    }
+
+    fn const_instruction(&self, instruction: &str, index: usize) {
+        let value = self.chunk.get_constant(index);
+        println!(
+            "{:<16} {:4} {}",
+            instruction,
+            index,
+            GcTraceFormatter::new(value, self.gc)
+        )
+    }
+
+    fn value_instruction(&self, instruction: &str, index: usize) {
+        println!("{:<16} {:4}", instruction, index)
+    }
+
+    // fn invoke_instruction(&self, instruction: &str, constant_index: u8, args: u8) {
+    //     let value = self.chunk.constants[constant_index as usize];
+    //     println!(
+    //         "{:<16} {:4} ({}) {}",
+    //         instruction,
+    //         constant_index,
+    //         crate::gc::GcTraceFormatter::new(value, self.gc),
+    //         args
+    //     );
+    // }
 }

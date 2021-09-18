@@ -12,4 +12,6 @@ cpu-time = "1.0.0"
 
 [features]
 dump = []
-debug = []
+debug_trace_execution  = []
+debug_gc_log = []
+debug_gc_stress = []

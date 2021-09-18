@@ -1,19 +1,12 @@
-var globalOne;
-var globalTwo;
+var local = "global";
 
-fun main() {
-  for (var a = 1; a <= 2; a = a + 1) {
-    fun closure() {
-      print a;
-    }
-    if (globalOne == nil) {
-      globalOne = closure;
-    } else {
-      globalTwo = closure;
-    }
+fun makeClosure() {
+  local = "local";
+  fun closure() {
+    print local;
   }
+  return closure;
 }
 
-main();
-globalOne();
-globalTwo();
+var closure = makeClosure();
+closure();

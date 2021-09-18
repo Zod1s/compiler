@@ -1,34 +1,52 @@
-use crate::object::{Closure, Function, LoxString, NativeFn};
-use std::{cell::RefCell, fmt, rc::Rc};
+use crate::{
+    gc::{Gc, GcRef, GcTrace},
+    object::{Closure, Function, LoxString, NativeFn},
+};
+use std::{any::Any, collections::HashMap, fmt};
 
-pub type MutRef<T> = Rc<RefCell<T>>;
-
-pub fn new_mutref<T>(value: T) -> MutRef<T> {
-    Rc::new(RefCell::new(value))
-}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Copy)]
 pub enum Value {
     Number(f64),
     Bool(bool),
     Nil,
-    VString(LoxString),
-    Function(Function),
+    VString(GcRef<LoxString>),
+    Function(GcRef<Function>),
     NativeFn(NativeFn),
-    Closure(Closure),
+    Closure(GcRef<Closure>),
 }
 
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl GcTrace for Value {
+    fn format(&self, f: &mut fmt::Formatter, gc: &Gc) -> fmt::Result {
         match self {
-            Value::Number(n) => write!(f, "{}", n),
-            Value::Bool(b) => write!(f, "{}", b),
-            Value::Nil => write!(f, "Nil"),
-            Value::VString(s) => write!(f, "\"{}\"", s),
-            Value::Function(fun) => write!(f, "{}", fun),
-            Value::NativeFn(fun) => write!(f, "{:?}", fun),
-            Value::Closure(c) => write!(f, "{:?}", c),
+            Value::Number(value) => write!(f, "{}", value),
+            Value::Bool(value) => write!(f, "{}", value),
+            Value::Nil => write!(f, "nil"),
+            Value::VString(value) => gc.deref(*value).format(f, gc),
+            Value::Function(value) => gc.deref(*value).format(f, gc),
+            Value::NativeFn(_) => write!(f, "<native fn>"),
+            Value::Closure(value) => gc.deref(*value).format(f, gc),
         }
+    }
+
+    fn size(&self) -> usize {
+        0
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        match self {
+            Value::Function(value) => gc.mark_object(*value),
+            Value::Closure(value) => gc.mark_object(*value),
+            Value::VString(value) => gc.mark_object(*value),
+            _ => (),
+        }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        panic!("Value should not be allocated")
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        panic!("Value should not be allocated")
     }
 }
 
@@ -80,3 +98,5 @@ impl Precedence {
         }
     }
 }
+
+pub type Table = HashMap<GcRef<LoxString>, Value>;
