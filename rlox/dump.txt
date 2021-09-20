@@ -1,29 +1,8 @@
 === BEGIN script ===
-0000    7 OP_CLOSURE          1 makeClosure
-0001    | OP_DEFINE_GLOBAL    0 "makeClosure"
-0002    9 OP_GET_GLOBAL       0 "makeClosure"
-0003    | OP_CALL             0
-0004    | OP_DEFINE_GLOBAL    2 "closure"
-0005   10 OP_GET_GLOBAL       2 "closure"
-0006    | OP_CALL             0
-0007    | OP_POP
-0008    | OP_NIL
-0009    | OP_RETURN
-=== END script ===
-
-=== BEGIN makeClosure ===
-0000    2 OP_CONSTANT         0 "local"
-0001    5 OP_CLOSURE          1 closure
-0002    6 OP_GET_LOCAL        2
-0003    | OP_RETURN
-0004    7 OP_NIL
-0005    | OP_RETURN
-=== END makeClosure ===
-
-=== BEGIN closure ===
-0000    4 OP_GET_UPVALUE      0
-0001    | OP_PRINT
-0002    5 OP_NIL
-0003    | OP_RETURN
-=== END closure ===
+0000    1 OP_GET_GLOBAL       0 panic
+0001    | OP_CONSTANT         1 Prova
+0002    | OP_CALL             1
+0003    | OP_POP
+0004    | OP_RETURN_NIL
+===  END script  ===
 

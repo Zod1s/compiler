@@ -1,7 +1,7 @@
 use crate::{
     chunk::{Chunk, OpCode},
     gc::{Gc, GcRef, GcTrace},
-    types::{Value, Table},
+    types::{Table, Value},
     vm::Vm,
 };
 use std::{any::Any, fmt, mem};
@@ -11,9 +11,135 @@ pub struct LoxString {
     pub s: String,
 }
 
-impl LoxString {
-    pub fn new(s: String) -> Self {
-        LoxString { s }
+impl fmt::Display for LoxString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.s)
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct FunctionUpvalue {
+    pub index: usize,
+    pub is_local: bool,
+}
+
+impl FunctionUpvalue {
+    pub fn new(index: usize, is_local: bool) -> Self {
+        FunctionUpvalue { index, is_local }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Function {
+    pub arity: usize,
+    pub chunk: Chunk,
+    pub name: GcRef<LoxString>,
+    pub upvalues: Vec<FunctionUpvalue>,
+}
+
+impl Function {
+    pub fn new(name: GcRef<LoxString>) -> Self {
+        Function {
+            arity: 0,
+            chunk: Chunk::new(),
+            name,
+            upvalues: Vec::new(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum FunctionType {
+    Function,
+    Initializer,
+    Method,
+    Script,
+}
+
+#[derive(Clone, Copy)]
+pub struct NativeFn(pub fn(&Vm, &[Value]) -> Value);
+
+impl fmt::Debug for NativeFn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<fn>")
+    }
+}
+
+impl PartialEq for NativeFn {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Upvalue {
+    pub location: usize,
+    pub closed: Option<Value>,
+}
+
+impl Upvalue {
+    pub fn new(location: usize) -> Self {
+        Upvalue {
+            location,
+            closed: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Closure {
+    pub function: GcRef<Function>,
+    pub upvalues: Vec<GcRef<Upvalue>>,
+}
+
+impl Closure {
+    pub fn new(function: GcRef<Function>) -> Self {
+        Closure {
+            function,
+            upvalues: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Class {
+    pub name: GcRef<LoxString>,
+    pub methods: Table,
+}
+
+impl Class {
+    pub fn new(name: GcRef<LoxString>) -> Self {
+        Class {
+            name,
+            methods: Table::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Instance {
+    pub class: GcRef<Class>,
+    pub fields: Table,
+}
+
+impl Instance {
+    pub fn new(class: GcRef<Class>) -> Self {
+        Instance {
+            class,
+            fields: Table::new(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct BoundMethod {
+    pub receiver: Value,
+    pub method: GcRef<Closure>,
+}
+
+impl BoundMethod {
+    pub fn new(receiver: Value, method: GcRef<Closure>) -> Self {
+        BoundMethod { receiver, method }
     }
 }
 
@@ -34,49 +160,6 @@ impl GcTrace for LoxString {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
-    }
-}
-
-impl fmt::Display for LoxString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "\"{}\"", self.s)
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct FunctionUpvalue {
-    pub index: usize,
-    pub is_local: bool,
-}
-
-impl FunctionUpvalue {
-    pub fn new(index: usize, is_local: bool) -> Self {
-        FunctionUpvalue { index, is_local }
-    }
-}
-
-impl fmt::Display for FunctionUpvalue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "index: {}, local: {}", self.index, self.is_local)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Function {
-    pub arity: usize,
-    pub chunk: Chunk,
-    pub name: GcRef<LoxString>,
-    pub upvalues: Vec<FunctionUpvalue>,
-}
-
-impl Function {
-    pub fn new(name: GcRef<LoxString>) -> Self {
-        Function {
-            arity: 0,
-            chunk: Chunk::new(),
-            name,
-            upvalues: Vec::new(),
-        }
     }
 }
 
@@ -114,47 +197,27 @@ impl GcTrace for Function {
     }
 }
 
-impl fmt::Display for Function {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<fn {:?}>", self.name)
+impl GcTrace for Upvalue {
+    fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
+        write!(f, "upvalue")
     }
-}
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum FunctionType {
-    Function,
-    // Initializer,
-    // Method,
-    Script,
-}
-
-#[derive(Clone, Copy)]
-pub struct NativeFn(pub fn(&Vm, &[Value]) -> Value);
-
-impl fmt::Debug for NativeFn {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<fn>")
+    fn size(&self) -> usize {
+        mem::size_of::<Upvalue>()
     }
-}
 
-impl PartialEq for NativeFn {
-    fn eq(&self, _: &Self) -> bool {
-        false
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Closure {
-    pub function: GcRef<Function>,
-    pub upvalues: Vec<GcRef<Upvalue>>,
-}
-
-impl Closure {
-    pub fn new(function: GcRef<Function>) -> Self {
-        Closure {
-            function,
-            upvalues: Vec::new(),
+    fn trace(&self, gc: &mut Gc) {
+        if let Some(obj) = self.closed {
+            gc.mark_value(obj)
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -183,56 +246,6 @@ impl GcTrace for Closure {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Upvalue {
-    pub location: usize,
-    pub closed: Option<Value>,
-}
-
-impl Upvalue {
-    pub fn new(location: usize) -> Self {
-        Upvalue {
-            location,
-            closed: None,
-        }
-    }
-}
-
-impl GcTrace for Upvalue {
-    fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
-        write!(f, "upvalue")
-    }
-
-    fn size(&self) -> usize {
-        mem::size_of::<Upvalue>()
-    }
-
-    fn trace(&self, gc: &mut Gc) {
-        if let Some(obj) = self.closed {
-            gc.mark_value(obj)
-        }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-#[derive(Debug)]
-pub struct Class {
-    pub name: GcRef<LoxString>,
-}
-
-impl Class {
-    pub fn new(name: GcRef<LoxString>) -> Self {
-        Class { name }
-    }
-}
-
 impl GcTrace for Class {
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         let name = gc.deref(self.name);
@@ -245,6 +258,7 @@ impl GcTrace for Class {
 
     fn trace(&self, gc: &mut Gc) {
         gc.mark_object(self.name);
+        gc.mark_table(&self.methods);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -253,21 +267,6 @@ impl GcTrace for Class {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
-    }
-}
-
-#[derive(Debug)]
-pub struct Instance {
-    pub class: GcRef<Class>,
-    pub fields: Table
-}
-
-impl Instance {
-    pub fn new(class: GcRef<Class>) -> Self {
-        Instance {
-            class,
-            fields: Table::new(),
-        }
     }
 }
 
@@ -285,6 +284,30 @@ impl GcTrace for Instance {
     fn trace(&self, gc: &mut Gc) {
         gc.mark_object(self.class);
         gc.mark_table(&self.fields);
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for BoundMethod {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        let closure = gc.deref(self.method);
+        closure.format(f, gc)
+    }
+
+    fn size(&self) -> usize {
+        mem::size_of::<BoundMethod>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_value(self.receiver);
+        gc.mark_object(self.method);
     }
 
     fn as_any(&self) -> &dyn Any {

@@ -17,19 +17,24 @@ pub struct Vm {
     frames: Vec<CallFrame>,
     open_upvalues: Vec<GcRef<Upvalue>>,
     start_time: ProcessTime,
+    init_string: GcRef<LoxString>,
 }
 
 impl Vm {
     pub fn new(repl: bool) -> Self {
+        let mut gc = Gc::new();
+        let init_string = gc.intern("init".to_owned());
+
         let mut vm = Vm {
             debug: false,
             repl,
-            gc: Gc::new(),
+            gc,
             stack: Vec::new(),
             globals: Table::new(),
             frames: Vec::new(),
             open_upvalues: Vec::new(),
             start_time: ProcessTime::now(),
+            init_string,
         };
 
         vm.define_native("clock", NativeFn(clock));
@@ -37,7 +42,7 @@ impl Vm {
         vm
     }
 
-    pub fn pop(&mut self) -> Value {
+    fn pop(&mut self) -> Value {
         if let Some(value) = self.stack.pop() {
             value
         } else {
@@ -46,7 +51,7 @@ impl Vm {
         }
     }
 
-    pub fn push(&mut self, value: Value) {
+    fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
 
@@ -81,7 +86,7 @@ impl Vm {
         Ok(())
     }
 
-    pub fn run(&mut self) -> Result<(), InterpretError> {
+    fn run(&mut self) -> Result<(), InterpretError> {
         loop {
             let instruction = self.current_chunk().get_opcode(self.current_frame().ip);
             if self.debug || cfg!(feature = "debug_trace_execution") {
@@ -94,26 +99,6 @@ impl Vm {
             self.current_frame_mut().ip += 1;
 
             match instruction {
-                OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
-                OpCode::Return => {
-                    let frame = self.frames.pop().unwrap();
-                    let result = self.pop();
-                    self.close_upvalue(frame.slot);
-                    if self.frames.is_empty() {
-                        return Ok(());
-                    } else {
-                        self.stack.truncate(frame.slot);
-                        self.push(result);
-                    }
-                }
-                OpCode::Negate => match self.pop() {
-                    Value::Number(n) => {
-                        self.push(Value::Number(-n));
-                    }
-                    _ => {
-                        self.runtime_error("No number found on stack.")?;
-                    }
-                },
                 OpCode::Add => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => {
                         self.push(Value::Number(a + b));
@@ -140,6 +125,27 @@ impl Vm {
                     _ => self
                         .runtime_error("Arguments must be both numbers or at least one string.")?,
                 },
+                OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
+                OpCode::Return => {
+                    let frame = self.frames.pop().unwrap();
+                    let result = self.pop();
+                    self.close_upvalue(frame.slot);
+                    if self.frames.is_empty() {
+                        return Ok(());
+                    } else {
+                        self.stack.truncate(frame.slot);
+                        self.push(result);
+                    }
+                }
+                OpCode::Negate => match self.pop() {
+                    Value::Number(n) => {
+                        self.push(Value::Number(-n));
+                    }
+                    _ => {
+                        self.runtime_error("No number found on stack.")?;
+                    }
+                },
+                
                 OpCode::Sub => {
                     self.bin_arith_op(|x, y| x - y, "when subtracting")?;
                 }
@@ -342,6 +348,9 @@ impl Vm {
                             if let Some(&value) = value {
                                 self.pop();
                                 self.push(value);
+                            } else {
+                                let class = instance.class;
+                                self.bind_method(class, name)?;
                             }
                         } else {
                             self.runtime_error(
@@ -368,7 +377,65 @@ impl Vm {
                     } else {
                         self.runtime_error("Only instances have properties.")?
                     }
-                } // _ => (),
+                }
+                OpCode::Method(slot) => {
+                    if let Value::VString(name) = self.current_chunk().get_constant(slot) {
+                        self.define_method(name);
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::Invoke((name, count)) => {
+                    if let Value::VString(name) = self.current_chunk().get_constant(name) {
+                        self.invoke(name, count)?
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::Inherit => {
+                    let pair = (self.peek(0), self.peek(1));
+                    if let (Value::Class(class), Value::Class(superclass)) = pair {
+                        let superclass = self.gc.deref(superclass);
+                        let methods = superclass.methods.clone();
+                        let class = self.gc.deref_mut(class);
+                        class.methods = methods;
+                        self.pop();
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::GetSuper(slot) => {
+                    if let Value::VString(name) = self.current_chunk().get_constant(slot) {
+                        if let Value::Class(superclass) = self.pop() {
+                            self.bind_method(superclass, name)?
+                        } else {
+                            self.runtime_error("No superclass found on the stack")?
+                        }
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::SuperInvoke((name, count)) => {
+                    if let Value::VString(name) = self.current_chunk().get_constant(name) {
+                        if let Value::Class(class) = self.pop() {
+                            self.invoke_from_class(class, name, count)?
+                        } else {
+                            self.runtime_error("No class found on the stack")?
+                        }
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::ReturnNil => {
+                    let frame = self.frames.pop().unwrap();
+                    self.close_upvalue(frame.slot);
+                    if self.frames.is_empty() {
+                        return Ok(());
+                    } else {
+                        self.stack.truncate(frame.slot);
+                        self.push(Value::Nil);
+                    }
+                }
             }
         }
     }
@@ -466,7 +533,31 @@ impl Vm {
                 let index = self.stack.len() - arg_count - 1;
                 self.stack[index] = Value::Instance(instance);
 
-                Ok(())
+                match self.gc.deref(cls).methods.get(&self.init_string) {
+                    Some(&method) => {
+                        if let Value::Closure(method) = method {
+                            self.call(method, arg_count)
+                        } else {
+                            self.runtime_error("Initializer is not closure")
+                        }
+                    }
+                    None => {
+                        if arg_count != 0 {
+                            let msg = format!("Expected 0 arguments but got {}.", arg_count);
+                            self.runtime_error(&msg)
+                        } else {
+                            Ok(())
+                        }
+                    }
+                }
+            }
+            Value::BoundMethod(met) => {
+                let bound_method = self.gc.deref(met);
+                let method = bound_method.method;
+                let receiver = bound_method.receiver;
+                let index = self.stack.len() - 1 - arg_count;
+                self.stack[index] = receiver;
+                self.call(method, arg_count)
             }
             _ => self.runtime_error("Can only call functions and classes."),
         }
@@ -519,6 +610,78 @@ impl Vm {
         }
     }
 
+    fn define_method(&mut self, name: GcRef<LoxString>) {
+        let method = self.peek(0);
+        if let Value::Class(class) = self.peek(1) {
+            let class = self.gc.deref_mut(class);
+            class.methods.insert(name, method);
+            self.pop();
+        } else {
+            panic!("Cannot define a method on non class.");
+        }
+    }
+
+    fn bind_method(
+        &mut self,
+        class: GcRef<Class>,
+        name: GcRef<LoxString>,
+    ) -> Result<(), InterpretError> {
+        let class = self.gc.deref(class);
+        if let Some(method) = class.methods.get(&name) {
+            let receiver = self.peek(0);
+            let method = match method {
+                Value::Closure(cl) => cl,
+                _ => panic!("No method found"),
+            };
+            let bound = BoundMethod::new(receiver, *method);
+            let bound = self.alloc(bound);
+            self.pop();
+            self.push(Value::BoundMethod(bound));
+            Ok(())
+        } else {
+            let name = &self.gc.deref(name).s;
+            let message = format!("Undefined property '{}'.", name);
+            self.runtime_error(&message)
+        }
+    }
+
+    fn invoke(&mut self, name: GcRef<LoxString>, arg_count: usize) -> Result<(), InterpretError> {
+        let receiver = self.peek(arg_count);
+        if let Value::Instance(instance) = receiver {
+            let instance = self.gc.deref(instance);
+            if let Some(&value) = instance.fields.get(&name) {
+                let pos = self.stack.len() - 1 - arg_count;
+                self.stack[pos] = value;
+                self.call_value(value, arg_count)
+            } else {
+                let class = instance.class;
+                self.invoke_from_class(class, name, arg_count)
+            }
+        } else {
+            self.runtime_error("Only instances have methods.")
+        }
+    }
+
+    fn invoke_from_class(
+        &mut self,
+        class: GcRef<Class>,
+        name: GcRef<LoxString>,
+        arg_count: usize,
+    ) -> Result<(), InterpretError> {
+        let class = self.gc.deref(class);
+        if let Some(&method) = class.methods.get(&name) {
+            if let Value::Closure(closure) = method {
+                self.call(closure, arg_count)
+            } else {
+                panic!("Got method that is not closure!")
+            }
+        } else {
+            let name = &self.gc.deref(name).s;
+            let message = format!("No method with name: {} found in class.", name);
+            self.runtime_error(&message)
+        }
+    }
+
     // gc
 
     fn collect_garbage(&mut self) {
@@ -556,6 +719,7 @@ impl Vm {
         }
 
         self.gc.mark_table(&self.globals);
+        self.gc.mark_object(self.init_string);
     }
 }
 
@@ -566,7 +730,7 @@ struct CallFrame {
 }
 
 impl CallFrame {
-    pub fn new(closure: GcRef<Closure>, slot: usize) -> Self {
+    fn new(closure: GcRef<Closure>, slot: usize) -> Self {
         CallFrame {
             closure,
             ip: 0,

@@ -6,29 +6,31 @@ use std::{any::Any, collections::HashMap, fmt};
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum Value {
-    Number(f64),
     Bool(bool),
-    Nil,
-    VString(GcRef<LoxString>),
-    Function(GcRef<Function>),
-    NativeFn(NativeFn),
-    Closure(GcRef<Closure>),
+    BoundMethod(GcRef<BoundMethod>),
     Class(GcRef<Class>),
+    Closure(GcRef<Closure>),
+    Function(GcRef<Function>),
     Instance(GcRef<Instance>),
+    NativeFn(NativeFn),
+    Nil,
+    Number(f64),
+    VString(GcRef<LoxString>),
 }
 
 impl GcTrace for Value {
     fn format(&self, f: &mut fmt::Formatter, gc: &Gc) -> fmt::Result {
         match self {
-            Value::Number(value) => write!(f, "{}", value),
             Value::Bool(value) => write!(f, "{}", value),
-            Value::Nil => write!(f, "nil"),
-            Value::VString(value) => gc.deref(*value).format(f, gc),
-            Value::Function(value) => gc.deref(*value).format(f, gc),
-            Value::NativeFn(_) => write!(f, "<native fn>"),
-            Value::Closure(value) => gc.deref(*value).format(f, gc),
+            Value::BoundMethod(value) => gc.deref(*value).format(f, gc),
             Value::Class(value) => gc.deref(*value).format(f, gc),
+            Value::Closure(value) => gc.deref(*value).format(f, gc),
+            Value::Function(value) => gc.deref(*value).format(f, gc),
             Value::Instance(value) => gc.deref(*value).format(f, gc),
+            Value::NativeFn(_) => write!(f, "<native fn>"),
+            Value::Nil => write!(f, "nil"),
+            Value::Number(value) => write!(f, "{}", value),
+            Value::VString(value) => gc.deref(*value).format(f, gc),
         }
     }
 
@@ -38,9 +40,12 @@ impl GcTrace for Value {
 
     fn trace(&self, gc: &mut Gc) {
         match self {
-            Value::Function(value) => gc.mark_object(*value),
             Value::Closure(value) => gc.mark_object(*value),
+            Value::Function(value) => gc.mark_object(*value),
             Value::VString(value) => gc.mark_object(*value),
+            Value::BoundMethod(value) => gc.mark_object(*value),
+            Value::Class(value) => gc.mark_object(*value),
+            Value::Instance(value) => gc.mark_object(*value),
             _ => (),
         }
     }

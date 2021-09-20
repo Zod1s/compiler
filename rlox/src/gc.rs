@@ -29,6 +29,7 @@ pub struct GcRef<T: GcTrace> {
 
 impl<T: GcTrace> Copy for GcRef<T> {}
 impl<T: GcTrace> Eq for GcRef<T> {}
+
 impl<T: GcTrace> Clone for GcRef<T> {
     #[inline]
     fn clone(&self) -> GcRef<T> {
@@ -165,7 +166,7 @@ impl Gc {
             .unwrap_or_else(|| panic!("Reference {} not found", gcref.index))
     }
 
-    pub fn free(&mut self, index: usize) {
+    fn free(&mut self, index: usize) {
         #[cfg(feature = "debug_gc_log")]
         eprintln!("free (id:{})", index,);
         if let Some(old) = self.objects[index].take() {
@@ -234,13 +235,13 @@ impl Gc {
         }
     }
 
-    pub fn trace_references(&mut self) {
+    fn trace_references(&mut self) {
         while let Some(index) = self.grey_stack.pop() {
             self.blacken_object(index);
         }
     }
 
-    pub fn blacken_object(&mut self, index: usize) {
+    fn blacken_object(&mut self, index: usize) {
         #[cfg(feature = "debug_gc_log")]
         eprintln!("blacken id:{}", index);
 
@@ -249,7 +250,7 @@ impl Gc {
         self.objects[index] = object;
     }
 
-    pub fn sweep(&mut self) {
+    fn sweep(&mut self) {
         for i in 0..self.objects.len() {
             if let Some(mut obj) = self.objects[i].as_mut() {
                 if obj.is_marked {
@@ -261,7 +262,7 @@ impl Gc {
         }
     }
 
-    pub fn remove_white_strings(&mut self) {
+    fn remove_white_strings(&mut self) {
         let strings = &mut self.strings;
         let objects = &self.objects;
         strings.retain(|_k, v| objects[v.index].as_ref().unwrap().is_marked);

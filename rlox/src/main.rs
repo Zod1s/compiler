@@ -1,17 +1,21 @@
 // cargo run 2>/dev/null to suppress warnings
-#![allow(
-    dead_code,
-    unused_variables,
-    unreachable_patterns,
-    irrefutable_let_patterns,
-    clippy::map_entry,
-    clippy::enum_variant_names
-)]
+// #![allow(
+//     dead_code,
+//     unused_variables,
+//     unreachable_patterns,
+//     irrefutable_let_patterns,
+//     clippy::map_entry,
+//     clippy::enum_variant_names
+// )]
 // #![deny(clippy::all)]
+
+/// TODO:
+/// -- rearrange code
+/// -- add arrays
+/// -- add stdfuns
 
 mod chunk;
 mod compiler;
-// mod hashmap;
 mod gc;
 mod object;
 mod scanner;
@@ -63,12 +67,13 @@ pub fn repl(mut vm: Vm) {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
                 if line == ":set debug" {
-                    println!("debug flag set");
+                    println!("> debug flag set");
                     vm.set_debug();
                 } else if line == ":unset debug" {
-                    println!("debug flag unset");
+                    println!("> debug flag unset");
                     vm.unset_debug();
                 } else if line == ":quit" || line == ":q" {
+                    println!("> quitting");
                     drop(vm);
                     break;
                 } else {

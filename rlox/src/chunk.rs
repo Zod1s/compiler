@@ -6,82 +6,48 @@ use crate::{
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OpCode {
-    Return,
-    Constant(usize),
-    Negate,
     Add,
-    Sub,
-    Mul,
+    Call(usize),
+    Class(usize),
+    CloseUpvalue,
+    Closure(usize),
+    Constant(usize),
+    DefineGlobal(usize),
     Div,
-    True,
-    False,
-    Nil,
-    Not,
     Equal,
-    NotEqual,
+    False,
+    GetGlobal(usize),
+    GetLocal(usize),
+    GetProperty(usize),
+    GetSuper(usize),
+    GetUpvalue(usize),
     Greater,
     GreaterEqual,
+    Inherit,
+    Invoke((usize, usize)),
+    Jump(usize),
+    JumpIfFalse(usize),
     Less,
     LessEqual,
-    Print,
-    Pop,
-    DefineGlobal(usize),
-    GetGlobal(usize),
-    SetGlobal(usize),
-    GetLocal(usize),
-    SetLocal(usize),
-    GetUpvalue(usize),
-    SetUpvalue(usize),
-    JumpIfFalse(usize),
-    Jump(usize),
     Loop(usize),
-    Call(usize),
-    Closure(usize),
-    CloseUpvalue,
-    Class(usize),
+    Method(usize),
+    Mul,
+    Negate,
+    Nil,
+    Not,
+    NotEqual,
+    Pop,
+    Print,
+    Return,
+    ReturnNil,
+    SetGlobal(usize),
+    SuperInvoke((usize, usize)),
+    SetLocal(usize),
     SetProperty(usize),
-    GetProperty(usize),
+    SetUpvalue(usize),
+    Sub,
+    True,
 }
-
-// impl fmt::Display for OpCode {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         match self {
-//             OpCode::Return => write!(f, "OP_RETURN"),
-//             OpCode::Constant(i) => write!(f, "OP_CONSTANT {}", i),
-//             OpCode::Negate => write!(f, "OP_NEGATE"),
-//             OpCode::Add => write!(f, "OP_ADD"),
-//             OpCode::Sub => write!(f, "OP_SUB"),
-//             OpCode::Mul => write!(f, "OP_MUL"),
-//             OpCode::Div => write!(f, "OP_DIV"),
-//             OpCode::True => write!(f, "OP_TRUE"),
-//             OpCode::False => write!(f, "OP_FALSE"),
-//             OpCode::Nil => write!(f, "OP_NIL"),
-//             OpCode::Not => write!(f, "OP_NOT"),
-//             OpCode::Equal => write!(f, "OP_EQUAL"),
-//             OpCode::NotEqual => write!(f, "OP_NOT_EQUAL"),
-//             OpCode::Greater => write!(f, "OP_GREATER"),
-//             OpCode::GreaterEqual => write!(f, "OP_GREATER_EQUAL"),
-//             OpCode::Less => write!(f, "OP_LESS"),
-//             OpCode::LessEqual => write!(f, "OP_LESS_EQUAL"),
-//             OpCode::Print => write!(f, "OP_PRINT"),
-//             OpCode::Pop => write!(f, "OP_POP"),
-//             OpCode::DefineGlobal(i) => write!(f, "OP_DEFINE_GLOBAL {}", i),
-//             OpCode::GetGlobal(i) => write!(f, "OP_GET_GLOBAL {}", i),
-//             OpCode::SetGlobal(i) => write!(f, "OP_SET_GLOBAL {}", i),
-//             OpCode::GetLocal(i) => write!(f, "OP_GET_LOCAL {}", i),
-//             OpCode::SetLocal(i) => write!(f, "OP_SET_LOCAL {}", i),
-//             OpCode::GetUpvalue(i) => write!(f, "OP_GET_UPVALUE {}", i),
-//             OpCode::SetUpvalue(i) => write!(f, "OP_SET_UPVALUE {}", i),
-//             OpCode::JumpIfFalse(i) => write!(f, "OP_JUMP_IF_FALSE {}", i),
-//             OpCode::Jump(i) => write!(f, "OP_JUMP {}", i),
-//             OpCode::Loop(i) => write!(f, "OP_LOOP {}", i),
-//             OpCode::Call(i) => write!(f, "OP_CALL {}", i),
-//             OpCode::Closure(i) => write!(f, "OP_CLOSURE {}", i),
-//             OpCode::CloseUpvalue => write!(f, "OP_CLOSE_UPVALUE"),
-//             OpCode::Class(i) => write!(f, "OP_CLASS {}", i),
-//         }
-//     }
-// }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Chunk {
@@ -108,11 +74,6 @@ impl Chunk {
     pub fn write(&mut self, opcode: OpCode, line: usize) {
         self.code.push(opcode);
         self.add_line(line);
-    }
-
-    #[inline]
-    pub fn code(&self) -> Vec<OpCode> {
-        self.code.clone()
     }
 
     #[inline]
@@ -173,17 +134,13 @@ impl<'s> Disassembler<'s> {
     }
 
     pub fn disassemble_to_string(&self, name: &str) -> String {
-        let mut string = String::new();
-        string = format!("{}{}", string, format!("=== BEGIN {} ===\n", name));
+        let mut content: Vec<String> = Vec::new();
+        content.push(format!("=== BEGIN {} ===", name));
         for (i, op) in self.chunk.code.iter().enumerate() {
-            string = format!(
-                "{}{}\n",
-                string,
-                self.disassemble_instruction_to_string(op, i)
-            );
+            content.push(self.disassemble_instruction_to_string(op, i));
         }
-        string = format!("{}{}", string, format!("=== END {} ===\n\n", name));
-        string
+        content.push(format!("===  END {}  ===\n\n", name));
+        content.join("\n")
     }
 
     fn disassemble_instruction_to_string(&self, instruction: &OpCode, offset: usize) -> String {
@@ -246,6 +203,11 @@ impl<'s> Disassembler<'s> {
                 string,
                 self.const_instruction_to_string("OP_SET_PROPERTY", *value)
             ),
+            OpCode::Method(value) => format!(
+                "{}{}",
+                string,
+                self.const_instruction_to_string("OP_METHOD", *value)
+            ),
             OpCode::JumpIfFalse(value) => format!(
                 "{}{}",
                 string,
@@ -280,7 +242,25 @@ impl<'s> Disassembler<'s> {
                     self.const_instruction_to_string("OP_CLASS", *value)
                 )
             }
+            OpCode::Invoke((name, args)) => format!(
+                "{}{}",
+                string,
+                self.invoke_instruction_to_string("OP_INVOKE", *name, *args)
+            ),
+            OpCode::SuperInvoke((name, args)) => format!(
+                "{}{}",
+                string,
+                self.invoke_instruction_to_string("OP_SUPER_INVOKE", *name, *args)
+            ),
+            OpCode::GetSuper(value) => {
+                format!(
+                    "{}{}",
+                    string,
+                    self.const_instruction_to_string("OP_GET_SUPER", *value)
+                )
+            }
             OpCode::Return => format!("{}{}", string, "OP_RETURN"),
+            OpCode::ReturnNil => format!("{}{}", string, "OP_RETURN_NIL"),
             OpCode::Negate => format!("{}{}", string, "OP_NEGATE"),
             OpCode::Add => format!("{}{}", string, "OP_ADD"),
             OpCode::Sub => format!("{}{}", string, "OP_SUB"),
@@ -299,24 +279,9 @@ impl<'s> Disassembler<'s> {
             OpCode::Print => format!("{}{}", string, "OP_PRINT"),
             OpCode::Pop => format!("{}{}", string, "OP_POP"),
             OpCode::CloseUpvalue => format!("{}{}", string, "OP_CLOSE_UPVALUE"),
+            OpCode::Inherit => format!("{}{}", string, "OP_INHERIT"),
         }
     }
-
-    // fn stack_to_string(&self) -> String {
-    //     let mut string = String::new();
-    //     if let Some(stack) = self.stack {
-    //         string = format!("{}Stack: ", string);
-    //         for &value in stack.iter() {
-    //             string = format!(
-    //                 "{}[{}]",
-    //                 string,
-    //                 crate::gc::GcTraceFormatter::new(value, self.gc)
-    //             );
-    //         }
-    //         string.push('\n');
-    //     }
-    //     string
-    // }
 
     fn const_instruction_to_string(&self, instruction: &str, index: usize) -> String {
         let value = self.chunk.get_constant(index);
@@ -330,6 +295,22 @@ impl<'s> Disassembler<'s> {
 
     fn value_instruction_to_string(&self, instruction: &str, index: usize) -> String {
         format!("{:<16} {:4}", instruction, index)
+    }
+
+    fn invoke_instruction_to_string(
+        &self,
+        instruction: &str,
+        constant_index: usize,
+        args: usize,
+    ) -> String {
+        let value = self.chunk.constants[constant_index as usize];
+        format!(
+            "{:<16} {:4} ({}) {}",
+            instruction,
+            constant_index,
+            crate::gc::GcTraceFormatter::new(value, self.gc),
+            args
+        )
     }
 
     pub fn disassemble(&self, name: &str) {
@@ -360,13 +341,20 @@ impl<'s> Disassembler<'s> {
             OpCode::SetUpvalue(value) => self.value_instruction("OP_SET_UPVALUE", *value),
             OpCode::GetProperty(value) => self.const_instruction("OP_GET_PROPERTY", *value),
             OpCode::SetProperty(value) => self.const_instruction("OP_SET_PROPERTY", *value),
+            OpCode::Method(value) => self.const_instruction("OP_METHOD", *value),
             OpCode::JumpIfFalse(value) => self.value_instruction("OP_JUMP_IF_FALSE", *value),
             OpCode::Jump(value) => self.value_instruction("OP_JUMP", *value),
             OpCode::Loop(value) => self.value_instruction("OP_LOOP", *value),
             OpCode::Call(value) => println!("{:<16} {:4}", "OP_CALL", *value),
             OpCode::Closure(value) => self.const_instruction("OP_CLOSURE", *value),
             OpCode::Class(value) => self.const_instruction("OP_CLASS", *value),
+            OpCode::Invoke((name, args)) => self.invoke_instruction("OP_INVOKE", *name, *args),
+            OpCode::GetSuper(value) => self.const_instruction("OP_GET_SUPER", *value),
+            OpCode::SuperInvoke((name, args)) => {
+                self.invoke_instruction("OP_SUPER_INVOKE", *name, *args)
+            }
             OpCode::Return => println!("OP_RETURN"),
+            OpCode::ReturnNil => println!("OP_RETURN_NIL"),
             OpCode::Negate => println!("OP_NEGATE"),
             OpCode::Add => println!("OP_ADD"),
             OpCode::Sub => println!("OP_SUB"),
@@ -385,6 +373,7 @@ impl<'s> Disassembler<'s> {
             OpCode::Print => println!("OP_PRINT"),
             OpCode::Pop => println!("OP_POP"),
             OpCode::CloseUpvalue => println!("OP_CLOSE_UPVALUE"),
+            OpCode::Inherit => println!("OP_INHERIT"),
         }
     }
 
@@ -412,14 +401,14 @@ impl<'s> Disassembler<'s> {
         println!("{:<16} {:4}", instruction, index)
     }
 
-    // fn invoke_instruction(&self, instruction: &str, constant_index: u8, args: u8) {
-    //     let value = self.chunk.constants[constant_index as usize];
-    //     println!(
-    //         "{:<16} {:4} ({}) {}",
-    //         instruction,
-    //         constant_index,
-    //         crate::gc::GcTraceFormatter::new(value, self.gc),
-    //         args
-    //     );
-    // }
+    fn invoke_instruction(&self, instruction: &str, constant_index: usize, args: usize) {
+        let value = self.chunk.constants[constant_index as usize];
+        println!(
+            "{:<16} {:4} ({}) {}",
+            instruction,
+            constant_index,
+            crate::gc::GcTraceFormatter::new(value, self.gc),
+            args
+        );
+    }
 }
