@@ -38,14 +38,15 @@ pub enum OpCode {
     NotEqual,
     Pop,
     Print,
+    Rem,
     Return,
     ReturnNil,
     SetGlobal(usize),
-    SuperInvoke((usize, usize)),
     SetLocal(usize),
     SetProperty(usize),
     SetUpvalue(usize),
     Sub,
+    SuperInvoke((usize, usize)),
     True,
 }
 
@@ -144,143 +145,72 @@ impl<'s> Disassembler<'s> {
     }
 
     fn disassemble_instruction_to_string(&self, instruction: &OpCode, offset: usize) -> String {
-        let mut string = String::new();
-        string = format!("{}{:04} ", string, offset);
+        let mut content: Vec<String> = Vec::new();
+        content.push(format!("{:04} ", offset));
         let line = self.chunk.get_line(offset);
         if offset > 0 && line == self.chunk.get_line(offset - 1) {
-            string = format!("{}   | ", string);
+            content.push("   | ".to_owned());
         } else {
-            string = format!("{}{:>4} ", string, line);
+            content.push(format!("{:>4} ", line));
         }
-        match instruction {
-            OpCode::Constant(value) => format!(
-                "{}{}",
-                string,
-                self.const_instruction_to_string("OP_CONSTANT", *value)
-            ),
-            OpCode::DefineGlobal(value) => format!(
-                "{}{}",
-                string,
+        let instr = match instruction {
+            OpCode::Constant(value) => self.const_instruction_to_string("OP_CONSTANT", *value),
+            OpCode::DefineGlobal(value) => {
                 self.const_instruction_to_string("OP_DEFINE_GLOBAL", *value)
-            ),
-            OpCode::GetGlobal(value) => format!(
-                "{}{}",
-                string,
-                self.const_instruction_to_string("OP_GET_GLOBAL", *value)
-            ),
-            OpCode::SetGlobal(value) => format!(
-                "{}{}",
-                string,
-                self.const_instruction_to_string("OP_SET_GLOBAL", *value)
-            ),
-            OpCode::GetLocal(value) => format!(
-                "{}{}",
-                string,
-                self.value_instruction_to_string("OP_GET_LOCAL", *value)
-            ),
-            OpCode::SetLocal(value) => format!(
-                "{}{}",
-                string,
-                self.value_instruction_to_string("OP_SET_LOCAL", *value)
-            ),
-            OpCode::GetUpvalue(value) => format!(
-                "{}{}",
-                string,
-                self.value_instruction_to_string("OP_GET_UPVALUE", *value)
-            ),
-            OpCode::SetUpvalue(value) => format!(
-                "{}{}",
-                string,
-                self.value_instruction_to_string("OP_SET_UPVALUE", *value)
-            ),
-            OpCode::GetProperty(value) => format!(
-                "{}{}",
-                string,
+            }
+            OpCode::GetGlobal(value) => self.const_instruction_to_string("OP_GET_GLOBAL", *value),
+            OpCode::SetGlobal(value) => self.const_instruction_to_string("OP_SET_GLOBAL", *value),
+            OpCode::GetLocal(value) => self.value_instruction_to_string("OP_GET_LOCAL", *value),
+            OpCode::SetLocal(value) => self.value_instruction_to_string("OP_SET_LOCAL", *value),
+            OpCode::GetUpvalue(value) => self.value_instruction_to_string("OP_GET_UPVALUE", *value),
+            OpCode::SetUpvalue(value) => self.value_instruction_to_string("OP_SET_UPVALUE", *value),
+            OpCode::GetProperty(value) => {
                 self.const_instruction_to_string("OP_GET_PROPERTY", *value)
-            ),
-            OpCode::SetProperty(value) => format!(
-                "{}{}",
-                string,
+            }
+            OpCode::SetProperty(value) => {
                 self.const_instruction_to_string("OP_SET_PROPERTY", *value)
-            ),
-            OpCode::Method(value) => format!(
-                "{}{}",
-                string,
-                self.const_instruction_to_string("OP_METHOD", *value)
-            ),
-            OpCode::JumpIfFalse(value) => format!(
-                "{}{}",
-                string,
+            }
+            OpCode::Method(value) => self.const_instruction_to_string("OP_METHOD", *value),
+            OpCode::JumpIfFalse(value) => {
                 self.value_instruction_to_string("OP_JUMP_IF_FALSE", *value)
-            ),
-            OpCode::Jump(value) => {
-                format!(
-                    "{}{}",
-                    string,
-                    self.value_instruction_to_string("OP_JUMP", *value)
-                )
             }
-            OpCode::Loop(value) => {
-                format!(
-                    "{}{}",
-                    string,
-                    self.value_instruction_to_string("OP_LOOP", *value)
-                )
-            }
-            OpCode::Call(value) => format!("{}{:<16} {:4}", string, "OP_CALL", *value),
-            OpCode::Closure(value) => {
-                format!(
-                    "{}{}",
-                    string,
-                    self.const_instruction_to_string("OP_CLOSURE", *value)
-                )
-            }
-            OpCode::Class(value) => {
-                format!(
-                    "{}{}",
-                    string,
-                    self.const_instruction_to_string("OP_CLASS", *value)
-                )
-            }
-            OpCode::Invoke((name, args)) => format!(
-                "{}{}",
-                string,
+            OpCode::Jump(value) => self.value_instruction_to_string("OP_JUMP", *value),
+            OpCode::Loop(value) => self.value_instruction_to_string("OP_LOOP", *value),
+            OpCode::Call(value) => format!("{:<16} {:4}", "OP_CALL", *value),
+            OpCode::Closure(value) => self.const_instruction_to_string("OP_CLOSURE", *value),
+            OpCode::Class(value) => self.const_instruction_to_string("OP_CLASS", *value),
+            OpCode::Invoke((name, args)) => {
                 self.invoke_instruction_to_string("OP_INVOKE", *name, *args)
-            ),
-            OpCode::SuperInvoke((name, args)) => format!(
-                "{}{}",
-                string,
-                self.invoke_instruction_to_string("OP_SUPER_INVOKE", *name, *args)
-            ),
-            OpCode::GetSuper(value) => {
-                format!(
-                    "{}{}",
-                    string,
-                    self.const_instruction_to_string("OP_GET_SUPER", *value)
-                )
             }
-            OpCode::Return => format!("{}{}", string, "OP_RETURN"),
-            OpCode::ReturnNil => format!("{}{}", string, "OP_RETURN_NIL"),
-            OpCode::Negate => format!("{}{}", string, "OP_NEGATE"),
-            OpCode::Add => format!("{}{}", string, "OP_ADD"),
-            OpCode::Sub => format!("{}{}", string, "OP_SUB"),
-            OpCode::Mul => format!("{}{}", string, "OP_MUL"),
-            OpCode::Div => format!("{}{}", string, "OP_DIV"),
-            OpCode::True => format!("{}{}", string, "OP_TRUE"),
-            OpCode::False => format!("{}{}", string, "OP_FALSE"),
-            OpCode::Nil => format!("{}{}", string, "OP_NIL"),
-            OpCode::Not => format!("{}{}", string, "OP_NOT"),
-            OpCode::Equal => format!("{}{}", string, "OP_EQUAL"),
-            OpCode::NotEqual => format!("{}{}", string, "OP_NOT_EQUAL"),
-            OpCode::Greater => format!("{}{}", string, "OP_GREATER"),
-            OpCode::GreaterEqual => format!("{}{}", string, "OP_GREATER_EQUAL"),
-            OpCode::Less => format!("{}{}", string, "OP_LESS"),
-            OpCode::LessEqual => format!("{}{}", string, "OP_LESS_EQUAL"),
-            OpCode::Print => format!("{}{}", string, "OP_PRINT"),
-            OpCode::Pop => format!("{}{}", string, "OP_POP"),
-            OpCode::CloseUpvalue => format!("{}{}", string, "OP_CLOSE_UPVALUE"),
-            OpCode::Inherit => format!("{}{}", string, "OP_INHERIT"),
-        }
+            OpCode::SuperInvoke((name, args)) => {
+                self.invoke_instruction_to_string("OP_SUPER_INVOKE", *name, *args)
+            }
+            OpCode::GetSuper(value) => self.const_instruction_to_string("OP_GET_SUPER", *value),
+            OpCode::Return => String::from("OP_RETURN"),
+            OpCode::ReturnNil => String::from("OP_RETURN_NIL"),
+            OpCode::Negate => String::from("OP_NEGATE"),
+            OpCode::Add => String::from("OP_ADD"),
+            OpCode::Sub => String::from("OP_SUB"),
+            OpCode::Rem => String::from("OP_REM"),
+            OpCode::Mul => String::from("OP_MUL"),
+            OpCode::Div => String::from("OP_DIV"),
+            OpCode::True => String::from("OP_TRUE"),
+            OpCode::False => String::from("OP_FALSE"),
+            OpCode::Nil => String::from("OP_NIL"),
+            OpCode::Not => String::from("OP_NOT"),
+            OpCode::Equal => String::from("OP_EQUAL"),
+            OpCode::NotEqual => String::from("OP_NOT_EQUAL"),
+            OpCode::Greater => String::from("OP_GREATER"),
+            OpCode::GreaterEqual => String::from("OP_GREATER_EQUAL"),
+            OpCode::Less => String::from("OP_LESS"),
+            OpCode::LessEqual => String::from("OP_LESS_EQUAL"),
+            OpCode::Print => String::from("OP_PRINT"),
+            OpCode::Pop => String::from("OP_POP"),
+            OpCode::CloseUpvalue => String::from("OP_CLOSE_UPVALUE"),
+            OpCode::Inherit => String::from("OP_INHERIT"),
+        };
+        content.push(instr);
+        content.join(" ")
     }
 
     fn const_instruction_to_string(&self, instruction: &str, index: usize) -> String {
@@ -314,67 +244,15 @@ impl<'s> Disassembler<'s> {
     }
 
     pub fn disassemble(&self, name: &str) {
-        println!("=== BEGIN {} ===", name);
-        for (i, op) in self.chunk.code.iter().enumerate() {
-            self.disassemble_instruction(op, i);
-        }
-        println!("=== END {} ===\n", name);
+        println!("{}", self.disassemble_to_string(name));
     }
 
     pub fn disassemble_instruction(&self, instruction: &OpCode, offset: usize) {
         self.stack();
-        print!("{:04} ", offset);
-        let line = self.chunk.get_line(offset);
-        if offset > 0 && line == self.chunk.get_line(offset - 1) {
-            print!("   | ");
-        } else {
-            print!("{:>4} ", line);
-        }
-        match instruction {
-            OpCode::Constant(value) => self.const_instruction("OP_CONSTANT", *value),
-            OpCode::DefineGlobal(value) => self.const_instruction("OP_DEFINE_GLOBAL", *value),
-            OpCode::GetGlobal(value) => self.const_instruction("OP_GET_GLOBAL", *value),
-            OpCode::SetGlobal(value) => self.const_instruction("OP_SET_GLOBAL", *value),
-            OpCode::GetLocal(value) => self.value_instruction("OP_GET_LOCAL", *value),
-            OpCode::SetLocal(value) => self.value_instruction("OP_SET_LOCAL", *value),
-            OpCode::GetUpvalue(value) => self.value_instruction("OP_GET_UPVALUE", *value),
-            OpCode::SetUpvalue(value) => self.value_instruction("OP_SET_UPVALUE", *value),
-            OpCode::GetProperty(value) => self.const_instruction("OP_GET_PROPERTY", *value),
-            OpCode::SetProperty(value) => self.const_instruction("OP_SET_PROPERTY", *value),
-            OpCode::Method(value) => self.const_instruction("OP_METHOD", *value),
-            OpCode::JumpIfFalse(value) => self.value_instruction("OP_JUMP_IF_FALSE", *value),
-            OpCode::Jump(value) => self.value_instruction("OP_JUMP", *value),
-            OpCode::Loop(value) => self.value_instruction("OP_LOOP", *value),
-            OpCode::Call(value) => println!("{:<16} {:4}", "OP_CALL", *value),
-            OpCode::Closure(value) => self.const_instruction("OP_CLOSURE", *value),
-            OpCode::Class(value) => self.const_instruction("OP_CLASS", *value),
-            OpCode::Invoke((name, args)) => self.invoke_instruction("OP_INVOKE", *name, *args),
-            OpCode::GetSuper(value) => self.const_instruction("OP_GET_SUPER", *value),
-            OpCode::SuperInvoke((name, args)) => {
-                self.invoke_instruction("OP_SUPER_INVOKE", *name, *args)
-            }
-            OpCode::Return => println!("OP_RETURN"),
-            OpCode::ReturnNil => println!("OP_RETURN_NIL"),
-            OpCode::Negate => println!("OP_NEGATE"),
-            OpCode::Add => println!("OP_ADD"),
-            OpCode::Sub => println!("OP_SUB"),
-            OpCode::Mul => println!("OP_MUL"),
-            OpCode::Div => println!("OP_DIV"),
-            OpCode::True => println!("OP_TRUE"),
-            OpCode::False => println!("OP_FALSE"),
-            OpCode::Nil => println!("OP_NIL"),
-            OpCode::Not => println!("OP_NOT"),
-            OpCode::Equal => println!("OP_EQUAL"),
-            OpCode::NotEqual => println!("OP_NOT_EQUAL"),
-            OpCode::Greater => println!("OP_GREATER"),
-            OpCode::GreaterEqual => println!("OP_GREATER_EQUAL"),
-            OpCode::Less => println!("OP_LESS"),
-            OpCode::LessEqual => println!("OP_LESS_EQUAL"),
-            OpCode::Print => println!("OP_PRINT"),
-            OpCode::Pop => println!("OP_POP"),
-            OpCode::CloseUpvalue => println!("OP_CLOSE_UPVALUE"),
-            OpCode::Inherit => println!("OP_INHERIT"),
-        }
+        println!(
+            "{}",
+            self.disassemble_instruction_to_string(instruction, offset)
+        );
     }
 
     fn stack(&self) {
@@ -385,30 +263,5 @@ impl<'s> Disassembler<'s> {
             }
             println!();
         }
-    }
-
-    fn const_instruction(&self, instruction: &str, index: usize) {
-        let value = self.chunk.get_constant(index);
-        println!(
-            "{:<16} {:4} {}",
-            instruction,
-            index,
-            GcTraceFormatter::new(value, self.gc)
-        )
-    }
-
-    fn value_instruction(&self, instruction: &str, index: usize) {
-        println!("{:<16} {:4}", instruction, index)
-    }
-
-    fn invoke_instruction(&self, instruction: &str, constant_index: usize, args: usize) {
-        let value = self.chunk.constants[constant_index as usize];
-        println!(
-            "{:<16} {:4} ({}) {}",
-            instruction,
-            constant_index,
-            crate::gc::GcTraceFormatter::new(value, self.gc),
-            args
-        );
     }
 }

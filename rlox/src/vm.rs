@@ -39,6 +39,14 @@ impl Vm {
 
         vm.define_native("clock", NativeFn(clock));
         vm.define_native("panic", NativeFn(lox_panic));
+        vm.define_native("sqrt", NativeFn(sqrt));
+        vm.define_native("pow", NativeFn(pow));
+        vm.define_native("square", NativeFn(square));
+        vm.define_native("abs", NativeFn(abs));
+        vm.define_native("min", NativeFn(min));
+        vm.define_native("max", NativeFn(max));
+        vm.define_native("floor", NativeFn(floor));
+        vm.define_native("ceil", NativeFn(ceil));
         vm
     }
 
@@ -58,7 +66,10 @@ impl Vm {
     pub fn interpret(&mut self, code: &str) -> Result<(), InterpretError> {
         let function = compiler::compile(code, &mut self.gc)?;
         self.push(Value::Function(function));
-        let closure = self.alloc(Closure::new(function));
+        let closure = self.alloc(Closure {
+            function,
+            upvalues: Vec::new(),
+        });
         self.frames.push(CallFrame::new(closure, 0));
         self.run()
     }
@@ -68,7 +79,8 @@ impl Vm {
         let function = self.gc.deref(function);
         let name = &self.gc.deref(function.name).s;
         let disassembler = Disassembler::new(&self.gc, &function.chunk, Some(&self.stack));
-        let mut content = disassembler.disassemble_to_string(name);
+        let mut content = Vec::new();
+        content.push(disassembler.disassemble_to_string(name));
         for gcref in self.gc.objects.iter().rev() {
             if let Some(gcref) = gcref {
                 if let Some(fun) = gcref.object.as_any().downcast_ref::<Function>() {
@@ -76,13 +88,12 @@ impl Vm {
                         let name = &self.gc.deref(fun.name).s;
                         let disassembler =
                             Disassembler::new(&self.gc, &fun.chunk, Some(&self.stack));
-                        content =
-                            format!("{}{}", content, disassembler.disassemble_to_string(name));
+                        content.push(disassembler.disassemble_to_string(name));
                     }
                 }
             }
         }
-        fs::write(file, content).expect("Couldn't write to file");
+        fs::write(file, content.join("")).expect("Couldn't write to file");
         Ok(())
     }
 
@@ -125,48 +136,125 @@ impl Vm {
                     _ => self
                         .runtime_error("Arguments must be both numbers or at least one string.")?,
                 },
-                OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
-                OpCode::Return => {
-                    let frame = self.frames.pop().unwrap();
-                    let result = self.pop();
-                    self.close_upvalue(frame.slot);
-                    if self.frames.is_empty() {
-                        return Ok(());
+                OpCode::Call(arg_count) => {
+                    self.call_value(self.peek(arg_count), arg_count)?;
+                }
+                OpCode::Class(value) => {
+                    if let Value::VString(name) = self.current_chunk().constants[value] {
+                        let class = Class {
+                            name,
+                            methods: Table::new(),
+                        };
+                        let class = self.alloc(class);
+                        self.push(Value::Class(class));
                     } else {
-                        self.stack.truncate(frame.slot);
-                        self.push(result);
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
                     }
                 }
-                OpCode::Negate => match self.pop() {
-                    Value::Number(n) => {
-                        self.push(Value::Number(-n));
+                OpCode::CloseUpvalue => {
+                    let top = self.stack.len() - 1;
+                    self.close_upvalue(top);
+                    self.pop();
+                }
+                OpCode::Closure(index) => match self.current_chunk().get_constant(index) {
+                    Value::Function(function) => {
+                        let upvalue_count = self.gc.deref(function).upvalues.len();
+                        let mut closure = Closure {
+                            function,
+                            upvalues: Vec::new(),
+                        };
+
+                        for i in 0..upvalue_count {
+                            let upvalue = self.gc.deref(function).upvalues[i];
+                            let value = if upvalue.is_local {
+                                self.capture_upvalue(self.current_frame().slot + upvalue.index)
+                            } else {
+                                self.current_closure().upvalues[upvalue.index]
+                            };
+                            closure.upvalues.push(value);
+                        }
+                        let closure = self.alloc(closure);
+                        self.push(Value::Closure(closure));
                     }
-                    _ => {
-                        self.runtime_error("No number found on stack.")?;
-                    }
+                    _ => self.runtime_error("Error: no function found.")?,
                 },
-                
-                OpCode::Sub => {
-                    self.bin_arith_op(|x, y| x - y, "when subtracting")?;
-                }
-                OpCode::Mul => {
-                    self.bin_arith_op(|x, y| x * y, "when multiplying")?;
+                OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
+                OpCode::DefineGlobal(index) => {
+                    if let Value::VString(string_ref) = self.current_chunk().constants[index] {
+                        self.globals.insert(string_ref, self.peek(0));
+                        self.pop();
+                    } else {
+                        self.runtime_error(
+                            "Error: Invalid identifier found for definition on stack.",
+                        )?
+                    }
                 }
                 OpCode::Div => {
                     self.bin_arith_op(|x, y| x / y, "when dividing")?;
                 }
-                OpCode::False => self.push(Value::Bool(false)),
-                OpCode::True => self.push(Value::Bool(true)),
-                OpCode::Nil => self.push(Value::Nil),
-                OpCode::Not => {
-                    let value = self.pop().is_false();
-                    self.push(Value::Bool(value));
-                }
                 OpCode::Equal => {
                     self.bin_op(|x, y| x == y)?;
                 }
-                OpCode::NotEqual => {
-                    self.bin_op(|x, y| x != y)?;
+                OpCode::False => self.push(Value::Bool(false)),
+                OpCode::GetGlobal(index) => {
+                    if let Value::VString(string_ref) = self.current_chunk().get_constant(index) {
+                        match self.globals.get(&string_ref) {
+                            Some(&value) => self.push(value),
+                            None => self.runtime_error(&format!(
+                                "Undefined variable '{}'.",
+                                self.gc.deref(string_ref)
+                            ))?,
+                        }
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::GetLocal(slot) => {
+                    self.push(self.stack[slot + self.current_frame().slot]);
+                }
+                OpCode::GetProperty(slot) => {
+                    if let Value::Instance(instance) = self.peek(0) {
+                        let instance = self.gc.deref(instance);
+                        if let Value::VString(name) = self.current_chunk().get_constant(slot) {
+                            let value = instance.fields.get(&name);
+                            if let Some(&value) = value {
+                                self.pop();
+                                self.push(value);
+                            } else {
+                                let class = instance.class;
+                                self.bind_method(class, name)?;
+                            }
+                        } else {
+                            self.runtime_error(
+                                "Error: Invalid identifier found for usage on stack.",
+                            )?
+                        }
+                    } else {
+                        self.runtime_error("Only instances have properties.")?
+                    }
+                }
+                OpCode::GetSuper(slot) => {
+                    if let Value::VString(name) = self.current_chunk().get_constant(slot) {
+                        if let Value::Class(superclass) = self.pop() {
+                            self.bind_method(superclass, name)?
+                        } else {
+                            self.runtime_error("No superclass found on the stack")?
+                        }
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::GetUpvalue(slot) => {
+                    let value = {
+                        let upvalue = self.current_closure().upvalues[slot];
+                        let upvalue = self.gc.deref(upvalue);
+                        if let Some(value) = upvalue.closed {
+                            value
+                        } else {
+                            self.stack[upvalue.location]
+                        }
+                    };
+                    self.push(value);
                 }
                 OpCode::Greater => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => {
@@ -192,6 +280,33 @@ impl Vm {
                     }
                     _ => self.runtime_error("Arguments must be of same type and comparable.")?,
                 },
+                OpCode::Inherit => {
+                    let pair = (self.peek(0), self.peek(1));
+                    if let (Value::Class(class), Value::Class(superclass)) = pair {
+                        let superclass = self.gc.deref(superclass);
+                        let methods = superclass.methods.clone();
+                        let class = self.gc.deref_mut(class);
+                        class.methods = methods;
+                        self.pop();
+                    } else {
+                        self.runtime_error("Superclass must be a class.")?
+                    }
+                }
+                OpCode::Invoke((name, count)) => {
+                    if let Value::VString(name) = self.current_chunk().get_constant(name) {
+                        self.invoke(name, count)?
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::Jump(offset) => {
+                    self.current_frame_mut().ip += offset;
+                }
+                OpCode::JumpIfFalse(offset) => {
+                    if self.peek(0).is_false() {
+                        self.current_frame_mut().ip += offset;
+                    }
+                }
                 OpCode::Less => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => {
                         self.push(Value::Bool(a < b));
@@ -216,6 +331,57 @@ impl Vm {
                     }
                     _ => self.runtime_error("Arguments must be of same type and comparable.")?,
                 },
+                OpCode::Loop(offset) => {
+                    self.current_frame_mut().ip -= offset + 1;
+                }
+                OpCode::Method(slot) => {
+                    if let Value::VString(name) = self.current_chunk().get_constant(slot) {
+                        self.define_method(name);
+                    } else {
+                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                    }
+                }
+                OpCode::Rem => match (self.pop(), self.pop()) {
+                    (Value::Number(b), Value::Number(a)) => {
+                        if b == (b as usize) as f64 && a == (a as usize) as f64 {
+                            let a = a as usize;
+                            let b = b as usize;
+                            let rem = a % b;
+                            self.push(Value::Number(rem as f64));
+                        }
+                    }
+                    (_, Value::Number(_)) => self.runtime_error(&format!(
+                        "Second argument must be a number when calculating the remainder."
+                    ))?,
+                    (Value::Number(_), _) => self.runtime_error(&format!(
+                        "First argument must be a number when calculating the remainder."
+                    ))?,
+                    _ => self.runtime_error(&format!(
+                        "Both arguments must be numbers when calculating the remainder."
+                    ))?,
+                },
+                OpCode::Mul => {
+                    self.bin_arith_op(|x, y| x * y, "when multiplying")?;
+                }
+                OpCode::Negate => match self.pop() {
+                    Value::Number(n) => {
+                        self.push(Value::Number(-n));
+                    }
+                    _ => {
+                        self.runtime_error("Operand must be a number.")?;
+                    }
+                },
+                OpCode::Nil => self.push(Value::Nil),
+                OpCode::Not => {
+                    let value = self.pop().is_false();
+                    self.push(Value::Bool(value));
+                }
+                OpCode::NotEqual => {
+                    self.bin_op(|x, y| x != y)?;
+                }
+                OpCode::Pop => {
+                    self.pop();
+                }
                 OpCode::Print => {
                     let value = self.pop();
                     if self.repl {
@@ -224,30 +390,25 @@ impl Vm {
                         println!("{}", GcTraceFormatter::new(value, &self.gc));
                     }
                 }
-                OpCode::Pop => {
-                    self.pop();
-                }
-                OpCode::DefineGlobal(index) => {
-                    if let Value::VString(string_ref) = self.current_chunk().constants[index] {
-                        self.globals.insert(string_ref, self.peek(0));
-                        self.pop();
+                OpCode::Return => {
+                    let frame = self.frames.pop().unwrap();
+                    let result = self.pop();
+                    self.close_upvalue(frame.slot);
+                    if self.frames.is_empty() {
+                        return Ok(());
                     } else {
-                        self.runtime_error(
-                            "Error: Invalid identifier found for definition on stack.",
-                        )?
+                        self.stack.truncate(frame.slot);
+                        self.push(result);
                     }
                 }
-                OpCode::GetGlobal(index) => {
-                    if let Value::VString(string_ref) = self.current_chunk().get_constant(index) {
-                        match self.globals.get(&string_ref) {
-                            Some(&value) => self.push(value),
-                            None => self.runtime_error(&format!(
-                                "Undefined variable '{}'.",
-                                self.gc.deref(string_ref)
-                            ))?,
-                        }
+                OpCode::ReturnNil => {
+                    let frame = self.frames.pop().unwrap();
+                    self.close_upvalue(frame.slot);
+                    if self.frames.is_empty() {
+                        return Ok(());
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        self.stack.truncate(frame.slot);
+                        self.push(Value::Nil);
                     }
                 }
                 OpCode::SetGlobal(index) => {
@@ -263,103 +424,9 @@ impl Vm {
                         self.runtime_error("Error: Invalid identifier found for usage on stack.")?
                     }
                 }
-                OpCode::GetLocal(slot) => {
-                    self.push(self.stack[slot + self.current_frame().slot]);
-                }
                 OpCode::SetLocal(slot) => {
                     let index = slot + self.current_frame().slot;
                     self.stack[index] = self.peek(0);
-                }
-                OpCode::GetUpvalue(slot) => {
-                    let value = {
-                        let upvalue = self.current_closure().upvalues[slot];
-                        let upvalue = self.gc.deref(upvalue);
-                        if let Some(value) = upvalue.closed {
-                            value
-                        } else {
-                            self.stack[upvalue.location]
-                        }
-                    };
-                    self.push(value);
-                }
-                OpCode::SetUpvalue(slot) => {
-                    let upvalue = self.current_closure().upvalues[slot];
-                    let value = self.peek(0);
-                    let mut upvalue = self.gc.deref_mut(upvalue);
-                    if upvalue.closed.is_none() {
-                        self.stack[upvalue.location] = value;
-                    } else {
-                        upvalue.closed = Some(value);
-                    }
-                }
-                OpCode::JumpIfFalse(offset) => {
-                    if self.peek(0).is_false() {
-                        self.current_frame_mut().ip += offset;
-                    }
-                }
-                OpCode::Jump(offset) => {
-                    self.current_frame_mut().ip += offset;
-                }
-                OpCode::Loop(offset) => {
-                    self.current_frame_mut().ip -= offset + 1;
-                }
-                OpCode::Call(arg_count) => {
-                    self.call_value(self.peek(arg_count), arg_count)?;
-                }
-
-                OpCode::Closure(index) => match self.current_chunk().get_constant(index) {
-                    Value::Function(function) => {
-                        let upvalue_count = self.gc.deref(function).upvalues.len();
-                        let mut closure = Closure::new(function);
-
-                        for i in 0..upvalue_count {
-                            let upvalue = self.gc.deref(function).upvalues[i];
-                            let value = if upvalue.is_local {
-                                self.capture_upvalue(self.current_frame().slot + upvalue.index)
-                            } else {
-                                self.current_closure().upvalues[upvalue.index]
-                            };
-                            closure.upvalues.push(value);
-                        }
-                        let closure = self.alloc(closure);
-                        self.push(Value::Closure(closure));
-                    }
-                    _ => self.runtime_error("Error: no function found.")?,
-                },
-                OpCode::CloseUpvalue => {
-                    let top = self.stack.len() - 1;
-                    self.close_upvalue(top);
-                    self.pop();
-                }
-                OpCode::Class(value) => {
-                    if let Value::VString(name) = self.current_chunk().constants[value] {
-                        let class = Class::new(name);
-                        let class = self.alloc(class);
-                        self.push(Value::Class(class));
-                    } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
-                    }
-                }
-                OpCode::GetProperty(slot) => {
-                    if let Value::Instance(instance) = self.peek(0) {
-                        let instance = self.gc.deref(instance);
-                        if let Value::VString(name) = self.current_chunk().get_constant(slot) {
-                            let value = instance.fields.get(&name);
-                            if let Some(&value) = value {
-                                self.pop();
-                                self.push(value);
-                            } else {
-                                let class = instance.class;
-                                self.bind_method(class, name)?;
-                            }
-                        } else {
-                            self.runtime_error(
-                                "Error: Invalid identifier found for usage on stack.",
-                            )?
-                        }
-                    } else {
-                        self.runtime_error("Only instances have properties.")?
-                    }
                 }
                 OpCode::SetProperty(slot) => {
                     if let Value::Instance(instance) = self.peek(1) {
@@ -375,67 +442,34 @@ impl Vm {
                             )?
                         }
                     } else {
-                        self.runtime_error("Only instances have properties.")?
+                        self.runtime_error("Only instances have fields.")?
                     }
                 }
-                OpCode::Method(slot) => {
-                    if let Value::VString(name) = self.current_chunk().get_constant(slot) {
-                        self.define_method(name);
+                OpCode::SetUpvalue(slot) => {
+                    let upvalue = self.current_closure().upvalues[slot];
+                    let value = self.peek(0);
+                    let mut upvalue = self.gc.deref_mut(upvalue);
+                    if upvalue.closed.is_none() {
+                        self.stack[upvalue.location] = value;
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        upvalue.closed = Some(value);
                     }
                 }
-                OpCode::Invoke((name, count)) => {
-                    if let Value::VString(name) = self.current_chunk().get_constant(name) {
-                        self.invoke(name, count)?
-                    } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
-                    }
-                }
-                OpCode::Inherit => {
-                    let pair = (self.peek(0), self.peek(1));
-                    if let (Value::Class(class), Value::Class(superclass)) = pair {
-                        let superclass = self.gc.deref(superclass);
-                        let methods = superclass.methods.clone();
-                        let class = self.gc.deref_mut(class);
-                        class.methods = methods;
-                        self.pop();
-                    } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
-                    }
-                }
-                OpCode::GetSuper(slot) => {
-                    if let Value::VString(name) = self.current_chunk().get_constant(slot) {
-                        if let Value::Class(superclass) = self.pop() {
-                            self.bind_method(superclass, name)?
-                        } else {
-                            self.runtime_error("No superclass found on the stack")?
-                        }
-                    } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
-                    }
+                OpCode::Sub => {
+                    self.bin_arith_op(|x, y| x - y, "when subtracting")?;
                 }
                 OpCode::SuperInvoke((name, count)) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(name) {
                         if let Value::Class(class) = self.pop() {
                             self.invoke_from_class(class, name, count)?
                         } else {
-                            self.runtime_error("No class found on the stack")?
+                            self.runtime_error("No class found on the stack.")?
                         }
                     } else {
                         self.runtime_error("Error: Invalid identifier found for usage on stack.")?
                     }
                 }
-                OpCode::ReturnNil => {
-                    let frame = self.frames.pop().unwrap();
-                    self.close_upvalue(frame.slot);
-                    if self.frames.is_empty() {
-                        return Ok(());
-                    } else {
-                        self.stack.truncate(frame.slot);
-                        self.push(Value::Nil);
-                    }
-                }
+                OpCode::True => self.push(Value::Bool(true)),
             }
         }
     }
@@ -521,14 +555,20 @@ impl Vm {
         match callee {
             Value::NativeFn(fun) => {
                 let left = self.stack.len() - arg_count;
-                let result = fun.0(self, &self.stack[left..]);
+                let result = match fun.0(self, &self.stack[left..]) {
+                    Ok(res) => res,
+                    Err(e) => return self.runtime_error(&e),
+                };
                 self.stack.truncate(left - 1);
                 self.push(result);
                 Ok(())
             }
             Value::Closure(fun) => self.call(fun, arg_count),
             Value::Class(cls) => {
-                let instance = Instance::new(cls);
+                let instance = Instance {
+                    class: cls,
+                    fields: Table::new(),
+                };
                 let instance = self.alloc(instance);
                 let index = self.stack.len() - arg_count - 1;
                 self.stack[index] = Value::Instance(instance);
@@ -590,7 +630,10 @@ impl Vm {
                 return upvalue;
             }
         }
-        let upvalue = Upvalue::new(index);
+        let upvalue = Upvalue {
+            location: index,
+            closed: None,
+        };
         let upvalue = self.alloc(upvalue);
         self.open_upvalues.push(upvalue);
         upvalue
@@ -633,7 +676,10 @@ impl Vm {
                 Value::Closure(cl) => cl,
                 _ => panic!("No method found"),
             };
-            let bound = BoundMethod::new(receiver, *method);
+            let bound = BoundMethod {
+                receiver,
+                method: *method,
+            };
             let bound = self.alloc(bound);
             self.pop();
             self.push(Value::BoundMethod(bound));
@@ -677,7 +723,7 @@ impl Vm {
             }
         } else {
             let name = &self.gc.deref(name).s;
-            let message = format!("No method with name: {} found in class.", name);
+            let message = format!("Undefined property '{}'.", name);
             self.runtime_error(&message)
         }
     }
@@ -739,12 +785,12 @@ impl CallFrame {
     }
 }
 
-fn clock(vm: &Vm, _args: &[Value]) -> Value {
+fn clock(vm: &Vm, _args: &[Value]) -> Result<Value, String> {
     let time = vm.start_time.elapsed().as_secs_f64();
-    Value::Number(time)
+    Ok(Value::Number(time))
 }
 
-fn lox_panic(vm: &Vm, args: &[Value]) -> Value {
+fn lox_panic(vm: &Vm, args: &[Value]) -> Result<Value, String> {
     let mut terms: Vec<String> = vec![];
 
     for &arg in args.iter() {
@@ -754,4 +800,116 @@ fn lox_panic(vm: &Vm, args: &[Value]) -> Value {
     }
 
     panic!("panic: {}", terms.join(", "))
+}
+
+fn sqrt(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n.sqrt()))
+            } else {
+                Err("sqrt needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("sqrt expects only one argument".to_owned()),
+    }
+}
+
+fn pow(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        2 => {
+            if let (Value::Number(n1), Value::Number(n2)) = (args[0], args[1]) {
+                Ok(Value::Number(n1.powf(n2)))
+            } else {
+                Err("sqrt needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("sqrt expects only one argument".to_owned()),
+    }
+}
+
+fn square(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n * n))
+            } else {
+                Err("square needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("square expects only one argument".to_owned()),
+    }
+}
+
+fn abs(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n.abs()))
+            } else {
+                Err("square needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("square expects only one argument".to_owned()),
+    }
+}
+
+fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        0 | 1 => Err("min expects more than 1 argument".to_owned()),
+        _ => {
+            let mut min = f64::INFINITY;
+            for &arg in args.iter() {
+                if let Value::Number(n) = arg {
+                    min = min.min(n);
+                } else {
+                    return Err("min needs numeric argument".to_owned());
+                }
+            }
+            return Ok(Value::Number(min));
+        }
+    }
+}
+
+fn max(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        0 | 1 => Err("max expects more than 1 argument".to_owned()),
+        _ => {
+            let mut max = -f64::INFINITY;
+            for &arg in args.iter() {
+                if let Value::Number(n) = arg {
+                    max = max.max(n);
+                } else {
+                    return Err("max needs numeric argument".to_owned());
+                }
+            }
+            return Ok(Value::Number(max));
+        }
+    }
+}
+
+fn floor(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n.floor()))
+            } else {
+                Err("floor needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("floor needs one argument".to_owned()),
+    }
+}
+
+fn ceil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n.ceil()))
+            } else {
+                Err("floor needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("floor needs one argument".to_owned()),
+    }
 }

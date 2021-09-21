@@ -1,0 +1,1 @@
+"1" <= 1; // expect runtime error: Arguments must be of same type and comparable.

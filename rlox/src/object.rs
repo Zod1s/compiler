@@ -23,29 +23,12 @@ pub struct FunctionUpvalue {
     pub is_local: bool,
 }
 
-impl FunctionUpvalue {
-    pub fn new(index: usize, is_local: bool) -> Self {
-        FunctionUpvalue { index, is_local }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
     pub name: GcRef<LoxString>,
     pub upvalues: Vec<FunctionUpvalue>,
-}
-
-impl Function {
-    pub fn new(name: GcRef<LoxString>) -> Self {
-        Function {
-            arity: 0,
-            chunk: Chunk::new(),
-            name,
-            upvalues: Vec::new(),
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -57,7 +40,7 @@ pub enum FunctionType {
 }
 
 #[derive(Clone, Copy)]
-pub struct NativeFn(pub fn(&Vm, &[Value]) -> Value);
+pub struct NativeFn(pub fn(&Vm, &[Value]) -> Result<Value, String>);
 
 impl fmt::Debug for NativeFn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -77,28 +60,10 @@ pub struct Upvalue {
     pub closed: Option<Value>,
 }
 
-impl Upvalue {
-    pub fn new(location: usize) -> Self {
-        Upvalue {
-            location,
-            closed: None,
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Closure {
     pub function: GcRef<Function>,
     pub upvalues: Vec<GcRef<Upvalue>>,
-}
-
-impl Closure {
-    pub fn new(function: GcRef<Function>) -> Self {
-        Closure {
-            function,
-            upvalues: Vec::new(),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -107,40 +72,16 @@ pub struct Class {
     pub methods: Table,
 }
 
-impl Class {
-    pub fn new(name: GcRef<LoxString>) -> Self {
-        Class {
-            name,
-            methods: Table::new(),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Instance {
     pub class: GcRef<Class>,
     pub fields: Table,
 }
 
-impl Instance {
-    pub fn new(class: GcRef<Class>) -> Self {
-        Instance {
-            class,
-            fields: Table::new(),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct BoundMethod {
     pub receiver: Value,
     pub method: GcRef<Closure>,
-}
-
-impl BoundMethod {
-    pub fn new(receiver: Value, method: GcRef<Closure>) -> Self {
-        BoundMethod { receiver, method }
-    }
 }
 
 impl GcTrace for LoxString {
@@ -169,7 +110,7 @@ impl GcTrace for Function {
         if name.is_empty() {
             write!(f, "<script>")
         } else {
-            write!(f, "{}", name)
+            write!(f, "<fn {}>", name)
         }
     }
 

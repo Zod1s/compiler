@@ -32,7 +32,6 @@ fn main() {
     match args.len() {
         1 => repl(Vm::new(true)),
         2 => run_file(&args[1], Vm::new(false)),
-        #[cfg(feature = "dump")]
         3 => dump(&args[1], Vm::new(false), &args[2]),
         _ => {
             eprintln!("Needs one argument, that is file name, or no arguments");
@@ -45,12 +44,10 @@ pub fn run_file(filename: &str, mut vm: Vm) {
     let program = fs::read_to_string(filename).expect("File not found");
     match vm.interpret(&program) {
         Err(InterpretError::Runtime) => {
-            println!("Error while running.");
             drop(vm);
             process::exit(70);
         }
         Err(InterpretError::Compile) => {
-            println!("Error while compiling.");
             drop(vm);
             process::exit(65);
         }

@@ -7,7 +7,7 @@ pub struct Scanner<'s> {
 
 impl<'s> Scanner<'s> {
     pub fn new(source: &'s str) -> Self {
-        Scanner {
+        Self {
             source,
             start: 0,
             current: 0,
@@ -66,6 +66,7 @@ impl<'s> Scanner<'s> {
                         self.make_token(TokenType::Greater)
                     }
                 }
+                '%' => self.make_token(TokenType::Rem),
                 '"' => self.string(),
                 '0'..='9' => self.number(),
                 'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
@@ -262,7 +263,7 @@ pub struct Token<'a> {
 
 impl<'a> Token<'a> {
     pub fn new(token_type: TokenType, lexeme: &'a str, line: usize) -> Self {
-        Token {
+        Self {
             token_type,
             lexeme,
             line,
@@ -270,7 +271,7 @@ impl<'a> Token<'a> {
     }
 
     pub fn syntethic(lexeme: &'a str) -> Self {
-        Token {
+        Self {
             token_type: TokenType::Error,
             lexeme,
             line: 0,
@@ -286,6 +287,7 @@ pub enum TokenType {
     LeftBrace,
     LeftParen,
     Minus,
+    Rem,
     Plus,
     RightBrace,
     RightParen,

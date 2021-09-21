@@ -1,0 +1,1 @@
+"s" + nil; // expect runtime error: Arguments must be both numbers or at least one string.
