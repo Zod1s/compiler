@@ -47,6 +47,15 @@ impl Vm {
         vm.define_native("max", NativeFn(max));
         vm.define_native("floor", NativeFn(floor));
         vm.define_native("ceil", NativeFn(ceil));
+        vm.define_native("isNumber", NativeFn(is_number));
+        vm.define_native("isString", NativeFn(is_string));
+        vm.define_native("isBool", NativeFn(is_bool));
+        vm.define_native("isClass", NativeFn(is_class));
+        vm.define_native("isNil", NativeFn(is_nil));
+        vm.define_native("isInstance", NativeFn(is_instance));
+        vm.define_native("isClosure", NativeFn(is_closure));
+        vm.define_native("isFunction", NativeFn(is_function));
+        vm.define_native("instanceof", NativeFn(instance_of));
         vm
     }
 
@@ -79,17 +88,13 @@ impl Vm {
         let function = self.gc.deref(function);
         let name = &self.gc.deref(function.name).s;
         let disassembler = Disassembler::new(&self.gc, &function.chunk, Some(&self.stack));
-        let mut content = Vec::new();
-        content.push(disassembler.disassemble_to_string(name));
-        for gcref in self.gc.objects.iter().rev() {
-            if let Some(gcref) = gcref {
-                if let Some(fun) = gcref.object.as_any().downcast_ref::<Function>() {
-                    if fun.name != function.name {
-                        let name = &self.gc.deref(fun.name).s;
-                        let disassembler =
-                            Disassembler::new(&self.gc, &fun.chunk, Some(&self.stack));
-                        content.push(disassembler.disassemble_to_string(name));
-                    }
+        let mut content = vec![disassembler.disassemble_to_string(name)];
+        for gcref in self.gc.objects.iter().rev().flatten() {
+            if let Some(fun) = gcref.object.as_any().downcast_ref::<Function>() {
+                if fun.name != function.name {
+                    let name = &self.gc.deref(fun.name).s;
+                    let disassembler = Disassembler::new(&self.gc, &fun.chunk, Some(&self.stack));
+                    content.push(disassembler.disassemble_to_string(name));
                 }
             }
         }
@@ -343,22 +348,22 @@ impl Vm {
                 }
                 OpCode::Rem => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => {
-                        if b == (b as usize) as f64 && a == (a as usize) as f64 {
+                        if b.fract() == 0.0 && a.fract() == 0.0 {
                             let a = a as usize;
                             let b = b as usize;
                             let rem = a % b;
                             self.push(Value::Number(rem as f64));
                         }
                     }
-                    (_, Value::Number(_)) => self.runtime_error(&format!(
-                        "Second argument must be a number when calculating the remainder."
-                    ))?,
-                    (Value::Number(_), _) => self.runtime_error(&format!(
-                        "First argument must be a number when calculating the remainder."
-                    ))?,
-                    _ => self.runtime_error(&format!(
-                        "Both arguments must be numbers when calculating the remainder."
-                    ))?,
+                    (_, Value::Number(_)) => self.runtime_error(
+                        "Second argument must be a number when calculating the remainder.",
+                    )?,
+                    (Value::Number(_), _) => self.runtime_error(
+                        "First argument must be a number when calculating the remainder.",
+                    )?,
+                    _ => self.runtime_error(
+                        "Both arguments must be numbers when calculating the remainder.",
+                    )?,
                 },
                 OpCode::Mul => {
                     self.bin_arith_op(|x, y| x * y, "when multiplying")?;
@@ -538,8 +543,7 @@ impl Vm {
 
     fn current_closure(&self) -> &Closure {
         let closure = self.current_frame().closure;
-        let closure = self.gc.deref(closure);
-        &closure
+        self.gc.deref(closure)
     }
 
     fn current_frame_mut(&mut self) -> &mut CallFrame {
@@ -866,7 +870,7 @@ fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                     return Err("min needs numeric argument".to_owned());
                 }
             }
-            return Ok(Value::Number(min));
+            Ok(Value::Number(min))
         }
     }
 }
@@ -883,7 +887,7 @@ fn max(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                     return Err("max needs numeric argument".to_owned());
                 }
             }
-            return Ok(Value::Number(max));
+            Ok(Value::Number(max))
         }
     }
 }
@@ -910,6 +914,130 @@ fn ceil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Err("floor needs numeric argument".to_owned())
             }
         }
-        _ => Err("floor needs one argument".to_owned()),
+        _ => Err("ceil needs one argument".to_owned()),
+    }
+}
+
+fn is_number(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_number needs one argument".to_owned()),
+    }
+}
+
+fn is_string(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::VString(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_number needs one argument".to_owned()),
+    }
+}
+
+fn is_bool(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Bool(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_bool needs one argument".to_owned()),
+    }
+}
+
+fn is_class(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Class(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_class needs one argument".to_owned()),
+    }
+}
+
+fn is_nil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Nil = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_nil needs one argument".to_owned()),
+    }
+}
+
+fn is_instance(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Instance(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_instance needs one argument".to_owned()),
+    }
+}
+
+fn is_closure(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Closure(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_closure needs one argument".to_owned()),
+    }
+}
+
+fn is_function(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Function(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("is_function needs one argument".to_owned()),
+    }
+}
+
+fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> { // try making it statement
+    match args.len() {
+        2 => {
+            if let (Value::Instance(instanceref), Value::VString(stringref)) = (args[0], args[1]) {
+                let classref = vm.gc.deref(instanceref).class;
+                let class = vm.gc.deref(classref);
+                let class_name = vm.gc.deref(class.name);
+                let string = vm.gc.deref(stringref);
+                Ok(Value::Bool(class_name == string))
+            } else if let (Value::Instance(instance), Value::Class(class)) = (args[0], args[1]) {
+                let class_ref = vm.gc.deref(instance).class;
+                Ok(Value::Bool(class_ref == class))
+            } else {
+                Err(format!("instance_of needs a class and a string with the same name of the class, found {} {}", args[0].type_of(), args[1].type_of()))
+            }
+        }
+        _ => Err("instanceof needs two arguments".to_owned()),
     }
 }

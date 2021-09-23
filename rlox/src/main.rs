@@ -12,7 +12,6 @@
 /// TODO:
 /// -- rearrange code
 /// -- add arrays
-/// -- add stdfuns
 
 mod chunk;
 mod compiler;

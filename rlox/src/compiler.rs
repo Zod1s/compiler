@@ -201,7 +201,7 @@ impl<'s> Parser<'s> {
         self.consume(TokenType::Eof, "Expect end of expression.");
         self.emit_return();
         if cfg!(feature = "debug_trace_execution") && !self.had_error {
-            let disassembler = Disassembler::new(&self.gc, &self.compiler.function.chunk, None);
+            let disassembler = Disassembler::new(self.gc, &self.compiler.function.chunk, None);
             disassembler.disassemble("code");
         }
         if self.had_error {

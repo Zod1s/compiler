@@ -1,0 +1,5 @@
+class Prova {}
+class Prova2 {}
+var a = Prova();
+var b = Prova;
+print instanceof(a, b);

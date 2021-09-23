@@ -67,6 +67,21 @@ impl Value {
             _ => false,
         }
     }
+
+    pub fn type_of(&self) -> &str {
+        match self {
+            Value::Bool(_) => "bool",
+            Value::BoundMethod(_) => "bound method",
+            Value::Class(_) => "class",
+            Value::Closure(_) => "closure",
+            Value::Function(_) => "function",
+            Value::Instance(_) => "instance",
+            Value::NativeFn(_) => "native function",
+            Value::Nil => "nil",
+            Value::Number(_) => "number",
+            Value::VString(_) => "string",
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
