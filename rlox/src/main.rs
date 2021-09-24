@@ -1,12 +1,12 @@
 // cargo run 2>/dev/null to suppress warnings
-// #![allow(
-//     dead_code,
-//     unused_variables,
-//     unreachable_patterns,
-//     irrefutable_let_patterns,
-//     clippy::map_entry,
-//     clippy::enum_variant_names
-// )]
+#![allow(
+    dead_code,
+    unused_variables,
+    unreachable_patterns,
+    irrefutable_let_patterns,
+    clippy::map_entry,
+    clippy::enum_variant_names
+)]
 // #![deny(clippy::all)]
 
 /// TODO:

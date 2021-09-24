@@ -2,7 +2,6 @@ use crate::{
     gc::{Gc, GcTraceFormatter},
     types::Value,
 };
-// use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OpCode {
@@ -12,6 +11,7 @@ pub enum OpCode {
     CloseUpvalue,
     Closure(usize),
     Constant(usize),
+    Decrement,
     DefineGlobal(usize),
     Div,
     Equal,
@@ -23,6 +23,7 @@ pub enum OpCode {
     GetUpvalue(usize),
     Greater,
     GreaterEqual,
+    Increment,
     Inherit,
     Invoke((usize, usize)),
     Jump(usize),
@@ -135,18 +136,24 @@ impl<'s> Disassembler<'s> {
     }
 
     pub fn disassemble_to_string(&self, name: &str) -> String {
-        let mut content: Vec<String> = Vec::new();
-        content.push(format!("=== BEGIN {} ===", name));
+        let mut content = vec![String::new()];
+        let mut length = 0;
         for (i, op) in self.chunk.code.iter().enumerate() {
-            content.push(self.disassemble_instruction_to_string(op, i));
+            let line = self.disassemble_instruction_to_string(op, i);
+            length = length.max(line.len());
+            content.push(line);
         }
-        content.push(format!("===  END {}  ===\n\n", name));
+        length -= 8 + name.len();
+        let half = length / 2;
+        let begin_space = "=".repeat(half);
+        let end_space = "=".repeat(length - half);
+        content[0] = format!("{} BEGIN {} {}", begin_space, name, end_space);
+        content.push(format!("{}  END {}  {}\n\n", begin_space, name, end_space));
         content.join("\n")
     }
 
     fn disassemble_instruction_to_string(&self, instruction: &OpCode, offset: usize) -> String {
-        let mut content: Vec<String> = Vec::new();
-        content.push(format!("{:04} ", offset));
+        let mut content = vec![format!("{:04} ", offset)];
         let line = self.chunk.get_line(offset);
         if offset > 0 && line == self.chunk.get_line(offset - 1) {
             content.push("   | ".to_owned());
@@ -187,6 +194,8 @@ impl<'s> Disassembler<'s> {
             }
             OpCode::GetSuper(value) => self.const_instruction_to_string("OP_GET_SUPER", *value),
             OpCode::Return => String::from("OP_RETURN"),
+            OpCode::Increment => String::from("OP_INCREMENT"),
+            OpCode::Decrement => String::from("OP_DECREMENT"),
             OpCode::ReturnNil => String::from("OP_RETURN_NIL"),
             OpCode::Negate => String::from("OP_NEGATE"),
             OpCode::Add => String::from("OP_ADD"),
@@ -227,17 +236,12 @@ impl<'s> Disassembler<'s> {
         format!("{:<16} {:4}", instruction, index)
     }
 
-    fn invoke_instruction_to_string(
-        &self,
-        instruction: &str,
-        constant_index: usize,
-        args: usize,
-    ) -> String {
-        let value = self.chunk.constants[constant_index as usize];
+    fn invoke_instruction_to_string(&self, instr: &str, index: usize, args: usize) -> String {
+        let value = self.chunk.constants[index as usize];
         format!(
             "{:<16} {:4} ({}) {}",
-            instruction,
-            constant_index,
+            instr,
+            index,
             crate::gc::GcTraceFormatter::new(value, self.gc),
             args
         )

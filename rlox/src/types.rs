@@ -6,6 +6,7 @@ use std::{any::Any, collections::HashMap, fmt};
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum Value {
+    Array(GcRef<Array>),
     Bool(bool),
     BoundMethod(GcRef<BoundMethod>),
     Class(GcRef<Class>),
@@ -21,6 +22,7 @@ pub enum Value {
 impl GcTrace for Value {
     fn format(&self, f: &mut fmt::Formatter, gc: &Gc) -> fmt::Result {
         match self {
+            Value::Array(value) => gc.deref(*value).format(f, gc),
             Value::Bool(value) => write!(f, "{}", value),
             Value::BoundMethod(value) => gc.deref(*value).format(f, gc),
             Value::Class(value) => gc.deref(*value).format(f, gc),
@@ -70,6 +72,7 @@ impl Value {
 
     pub fn type_of(&self) -> &str {
         match self {
+            Value::Array(_) => "array",
             Value::Bool(_) => "bool",
             Value::BoundMethod(_) => "bound method",
             Value::Class(_) => "class",

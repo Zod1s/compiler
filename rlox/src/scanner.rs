@@ -32,10 +32,38 @@ impl<'s> Scanner<'s> {
                 ';' => self.make_token(TokenType::Semicolon),
                 ',' => self.make_token(TokenType::Comma),
                 '.' => self.make_token(TokenType::Dot),
-                '-' => self.make_token(TokenType::Minus),
-                '+' => self.make_token(TokenType::Plus),
-                '/' => self.make_token(TokenType::Slash),
-                '*' => self.make_token(TokenType::Star),
+                '-' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::MinusEqual)
+                    } else if self.match_char('-') {
+                        self.make_token(TokenType::MinusMinus)
+                    } else {
+                        self.make_token(TokenType::Minus)
+                    }
+                }
+                '+' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::PlusEqual)
+                    } else if self.match_char('+') {
+                        self.make_token(TokenType::PlusPlus)
+                    } else {
+                        self.make_token(TokenType::Plus)
+                    }
+                }
+                '/' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::SlashEqual)
+                    } else {
+                        self.make_token(TokenType::Slash)
+                    }
+                }
+                '*' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::StarEqual)
+                    } else {
+                        self.make_token(TokenType::Star)
+                    }
+                }
                 '!' => {
                     if self.match_char('=') {
                         self.make_token(TokenType::BangEqual)
@@ -287,13 +315,19 @@ pub enum TokenType {
     LeftBrace,
     LeftParen,
     Minus,
+    MinusEqual,
+    MinusMinus,
     Rem,
     Plus,
+    PlusEqual,
+    PlusPlus,
     RightBrace,
     RightParen,
     Semicolon,
     Slash,
+    SlashEqual,
     Star,
+    StarEqual,
     // One or two character tokens.
     Bang,
     BangEqual,

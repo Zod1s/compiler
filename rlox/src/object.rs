@@ -84,6 +84,11 @@ pub struct BoundMethod {
     pub method: GcRef<Closure>,
 }
 
+#[derive(Debug)]
+pub struct Array {
+    pub array: Vec<Value>,
+}
+
 impl GcTrace for LoxString {
     fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
         write!(f, "{}", self)
@@ -249,6 +254,38 @@ impl GcTrace for BoundMethod {
     fn trace(&self, gc: &mut Gc) {
         gc.mark_value(self.receiver);
         gc.mark_object(self.method);
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for Array {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        write!(f, "[")?;
+        let array_len = self.array.len();
+        for i in 0..array_len {
+            self.array[i].format(f, gc)?;
+            if i != array_len - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, "]")
+    }
+
+    fn size(&self) -> usize {
+        mem::size_of::<Array>() + self.array.capacity() * mem::size_of::<Value>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        for &value in &self.array {
+            gc.mark_value(value);
+        }
     }
 
     fn as_any(&self) -> &dyn Any {

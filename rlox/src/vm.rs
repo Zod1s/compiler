@@ -21,6 +21,8 @@ pub struct Vm {
 }
 
 impl Vm {
+    // public interface
+
     pub fn new(repl: bool) -> Self {
         let mut gc = Gc::new();
         let init_string = gc.intern("init".to_owned());
@@ -37,6 +39,7 @@ impl Vm {
             init_string,
         };
 
+        // native function definition
         vm.define_native("clock", NativeFn(clock));
         vm.define_native("panic", NativeFn(lox_panic));
         vm.define_native("sqrt", NativeFn(sqrt));
@@ -47,29 +50,16 @@ impl Vm {
         vm.define_native("max", NativeFn(max));
         vm.define_native("floor", NativeFn(floor));
         vm.define_native("ceil", NativeFn(ceil));
-        vm.define_native("isNumber", NativeFn(is_number));
-        vm.define_native("isString", NativeFn(is_string));
         vm.define_native("isBool", NativeFn(is_bool));
         vm.define_native("isClass", NativeFn(is_class));
-        vm.define_native("isNil", NativeFn(is_nil));
-        vm.define_native("isInstance", NativeFn(is_instance));
         vm.define_native("isClosure", NativeFn(is_closure));
         vm.define_native("isFunction", NativeFn(is_function));
+        vm.define_native("isInstance", NativeFn(is_instance));
+        vm.define_native("isNil", NativeFn(is_nil));
+        vm.define_native("isNumber", NativeFn(is_number));
+        vm.define_native("isString", NativeFn(is_string));
         vm.define_native("instanceof", NativeFn(instance_of));
         vm
-    }
-
-    fn pop(&mut self) -> Value {
-        if let Some(value) = self.stack.pop() {
-            value
-        } else {
-            eprintln!("Error: popping a value from empty stack");
-            process::exit(65);
-        }
-    }
-
-    fn push(&mut self, value: Value) {
-        self.stack.push(value);
     }
 
     pub fn interpret(&mut self, code: &str) -> Result<(), InterpretError> {
@@ -101,6 +91,50 @@ impl Vm {
         fs::write(file, content.join("")).expect("Couldn't write to file");
         Ok(())
     }
+
+    pub fn set_debug(&mut self) {
+        self.debug = true;
+    }
+
+    pub fn unset_debug(&mut self) {
+        self.debug = false;
+    }
+
+    // stack manipulation
+
+    fn pop(&mut self) -> Value {
+        if let Some(value) = self.stack.pop() {
+            value
+        } else {
+            eprintln!("Error: popping a value from empty stack");
+            process::exit(65);
+        }
+    }
+
+    fn pop_number(&mut self, msg: &str) -> Result<f64, InterpretError> {
+        if let Value::Number(n) = self.pop() {
+            Ok(n)
+        } else {
+            match self.runtime_error(&format!("Error: no number found on stack {}", msg)) {
+                Err(e) => Err(e),
+                Ok(_) => panic!(),
+            }
+        }
+    }
+
+    fn push(&mut self, value: Value) {
+        self.stack.push(value);
+    }
+
+    fn push_number(&mut self, n: f64) {
+        self.stack.push(Value::Number(n));
+    }
+
+    fn peek(&self, index: usize) -> Value {
+        self.stack[self.stack.len() - 1 - index]
+    }
+
+    // main function
 
     fn run(&mut self) -> Result<(), InterpretError> {
         loop {
@@ -141,9 +175,7 @@ impl Vm {
                     _ => self
                         .runtime_error("Arguments must be both numbers or at least one string.")?,
                 },
-                OpCode::Call(arg_count) => {
-                    self.call_value(self.peek(arg_count), arg_count)?;
-                }
+                OpCode::Call(arg_count) => self.call_value(self.peek(arg_count), arg_count)?,
                 OpCode::Class(value) => {
                     if let Value::VString(name) = self.current_chunk().constants[value] {
                         let class = Class {
@@ -157,8 +189,7 @@ impl Vm {
                     }
                 }
                 OpCode::CloseUpvalue => {
-                    let top = self.stack.len() - 1;
-                    self.close_upvalue(top);
+                    self.close_upvalue(self.stack.len() - 1);
                     self.pop();
                 }
                 OpCode::Closure(index) => match self.current_chunk().get_constant(index) {
@@ -184,6 +215,10 @@ impl Vm {
                     _ => self.runtime_error("Error: no function found.")?,
                 },
                 OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
+                OpCode::Decrement => {
+                    let n = self.pop_number("to decrement")? - 1.0;
+                    self.push_number(n);
+                }
                 OpCode::DefineGlobal(index) => {
                     if let Value::VString(string_ref) = self.current_chunk().constants[index] {
                         self.globals.insert(string_ref, self.peek(0));
@@ -194,12 +229,8 @@ impl Vm {
                         )?
                     }
                 }
-                OpCode::Div => {
-                    self.bin_arith_op(|x, y| x / y, "when dividing")?;
-                }
-                OpCode::Equal => {
-                    self.bin_op(|x, y| x == y)?;
-                }
+                OpCode::Div => self.bin_arith_op(|x, y| x / y, "when dividing")?,
+                OpCode::Equal => self.bin_op(|x, y| x == y)?,
                 OpCode::False => self.push(Value::Bool(false)),
                 OpCode::GetGlobal(index) => {
                     if let Value::VString(string_ref) = self.current_chunk().get_constant(index) {
@@ -214,9 +245,7 @@ impl Vm {
                         self.runtime_error("Error: Invalid identifier found for usage on stack.")?
                     }
                 }
-                OpCode::GetLocal(slot) => {
-                    self.push(self.stack[slot + self.current_frame().slot]);
-                }
+                OpCode::GetLocal(slot) => self.push(self.stack[slot + self.current_frame().slot]),
                 OpCode::GetProperty(slot) => {
                     if let Value::Instance(instance) = self.peek(0) {
                         let instance = self.gc.deref(instance);
@@ -285,6 +314,10 @@ impl Vm {
                     }
                     _ => self.runtime_error("Arguments must be of same type and comparable.")?,
                 },
+                OpCode::Increment => {
+                    let n = self.pop_number("to increment")? + 1.0;
+                    self.push_number(n);
+                }
                 OpCode::Inherit => {
                     let pair = (self.peek(0), self.peek(1));
                     if let (Value::Class(class), Value::Class(superclass)) = pair {
@@ -346,44 +379,29 @@ impl Vm {
                         self.runtime_error("Error: Invalid identifier found for usage on stack.")?
                     }
                 }
-                OpCode::Rem => match (self.pop(), self.pop()) {
-                    (Value::Number(b), Value::Number(a)) => {
-                        if b.fract() == 0.0 && a.fract() == 0.0 {
-                            let a = a as usize;
-                            let b = b as usize;
-                            let rem = a % b;
-                            self.push(Value::Number(rem as f64));
-                        }
+                OpCode::Rem => {
+                    let (b, a) = (
+                        self.pop_number("as divisor in rem")?,
+                        self.pop_number("as dividend in rem")?,
+                    );
+                    if b.fract() == 0.0 && a.fract() == 0.0 {
+                        let a = a as usize;
+                        let b = b as usize;
+                        let rem = a % b;
+                        self.push(Value::Number(rem as f64));
                     }
-                    (_, Value::Number(_)) => self.runtime_error(
-                        "Second argument must be a number when calculating the remainder.",
-                    )?,
-                    (Value::Number(_), _) => self.runtime_error(
-                        "First argument must be a number when calculating the remainder.",
-                    )?,
-                    _ => self.runtime_error(
-                        "Both arguments must be numbers when calculating the remainder.",
-                    )?,
-                },
-                OpCode::Mul => {
-                    self.bin_arith_op(|x, y| x * y, "when multiplying")?;
                 }
-                OpCode::Negate => match self.pop() {
-                    Value::Number(n) => {
-                        self.push(Value::Number(-n));
-                    }
-                    _ => {
-                        self.runtime_error("Operand must be a number.")?;
-                    }
-                },
+                OpCode::Mul => self.bin_arith_op(|x, y| x * y, "when multiplying")?,
+                OpCode::Negate => {
+                    let n = self.pop_number("to negate")?;
+                    self.push(Value::Number(-n));
+                }
                 OpCode::Nil => self.push(Value::Nil),
                 OpCode::Not => {
                     let value = self.pop().is_false();
                     self.push(Value::Bool(value));
                 }
-                OpCode::NotEqual => {
-                    self.bin_op(|x, y| x != y)?;
-                }
+                OpCode::NotEqual => self.bin_op(|x, y| x != y)?,
                 OpCode::Pop => {
                     self.pop();
                 }
@@ -460,9 +478,7 @@ impl Vm {
                         upvalue.closed = Some(value);
                     }
                 }
-                OpCode::Sub => {
-                    self.bin_arith_op(|x, y| x - y, "when subtracting")?;
-                }
+                OpCode::Sub => self.bin_arith_op(|x, y| x - y, "when subtracting")?,
                 OpCode::SuperInvoke((name, count)) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(name) {
                         if let Value::Class(class) = self.pop() {
@@ -479,24 +495,15 @@ impl Vm {
         }
     }
 
-    fn bin_arith_op(
-        &mut self,
-        f: fn(f64, f64) -> f64,
-        message: &str,
-    ) -> Result<(), InterpretError> {
-        match (self.pop(), self.pop()) {
-            (Value::Number(b), Value::Number(a)) => {
-                self.push(Value::Number(f(a, b)));
-                Ok(())
-            }
-            (_, Value::Number(_)) => {
-                self.runtime_error(&format!("Second argument must be a number {}.", message))
-            }
-            (Value::Number(_), _) => {
-                self.runtime_error(&format!("First argument must be a number {}.", message))
-            }
-            _ => self.runtime_error(&format!("Both arguments must be numbers {}.", message)),
-        }
+    // helpers for binary operations
+
+    fn bin_arith_op(&mut self, f: fn(f64, f64) -> f64, msg: &str) -> Result<(), InterpretError> {
+        let (b, a) = (
+            self.pop_number(&format!("as second term {}", msg))?,
+            self.pop_number(&format!("as second term {}", msg))?,
+        );
+        self.push_number(f(a, b));
+        Ok(())
     }
 
     fn bin_op(&mut self, f: fn(Value, Value) -> bool) -> Result<(), InterpretError> {
@@ -504,6 +511,8 @@ impl Vm {
         self.push(Value::Bool(f(a, b)));
         Ok(())
     }
+
+    // error functions
 
     fn runtime_error(&mut self, message: &str) -> Result<(), InterpretError> {
         eprintln!("{}", message);
@@ -525,17 +534,7 @@ impl Vm {
         Err(InterpretError::Runtime)
     }
 
-    pub fn set_debug(&mut self) {
-        self.debug = true;
-    }
-
-    pub fn unset_debug(&mut self) {
-        self.debug = false;
-    }
-
-    fn peek(&self, index: usize) -> Value {
-        self.stack[self.stack.len() - 1 - index]
-    }
+    // current pointers
 
     fn current_frame(&self) -> &CallFrame {
         self.frames.last().unwrap()
@@ -554,6 +553,8 @@ impl Vm {
         let function = self.gc.deref(self.current_closure().function);
         &function.chunk
     }
+
+    // helpers for calling a function
 
     fn call_value(&mut self, callee: Value, arg_count: usize) -> Result<(), InterpretError> {
         match callee {
@@ -732,7 +733,7 @@ impl Vm {
         }
     }
 
-    // gc
+    // garbage collection helpers
 
     fn collect_garbage(&mut self) {
         if self.gc.should_gc() {
@@ -788,6 +789,8 @@ impl CallFrame {
         }
     }
 }
+
+// native functions
 
 fn clock(vm: &Vm, _args: &[Value]) -> Result<Value, String> {
     let time = vm.start_time.elapsed().as_secs_f64();
@@ -927,7 +930,7 @@ fn is_number(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_number needs one argument".to_owned()),
+        _ => Err("isNumber needs one argument".to_owned()),
     }
 }
 
@@ -940,7 +943,7 @@ fn is_string(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_number needs one argument".to_owned()),
+        _ => Err("isString needs one argument".to_owned()),
     }
 }
 
@@ -953,7 +956,7 @@ fn is_bool(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_bool needs one argument".to_owned()),
+        _ => Err("isBool needs one argument".to_owned()),
     }
 }
 
@@ -966,7 +969,7 @@ fn is_class(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_class needs one argument".to_owned()),
+        _ => Err("isClass needs one argument".to_owned()),
     }
 }
 
@@ -979,7 +982,7 @@ fn is_nil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_nil needs one argument".to_owned()),
+        _ => Err("isNil needs one argument".to_owned()),
     }
 }
 
@@ -992,7 +995,7 @@ fn is_instance(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_instance needs one argument".to_owned()),
+        _ => Err("isInstance needs one argument".to_owned()),
     }
 }
 
@@ -1005,7 +1008,7 @@ fn is_closure(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_closure needs one argument".to_owned()),
+        _ => Err("isClosure needs one argument".to_owned()),
     }
 }
 
@@ -1018,24 +1021,22 @@ fn is_function(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 Ok(Value::Bool(false))
             }
         }
-        _ => Err("is_function needs one argument".to_owned()),
+        _ => Err("isFunction needs one argument".to_owned()),
     }
 }
 
-fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> { // try making it statement
+fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         2 => {
-            if let (Value::Instance(instanceref), Value::VString(stringref)) = (args[0], args[1]) {
-                let classref = vm.gc.deref(instanceref).class;
-                let class = vm.gc.deref(classref);
-                let class_name = vm.gc.deref(class.name);
-                let string = vm.gc.deref(stringref);
-                Ok(Value::Bool(class_name == string))
-            } else if let (Value::Instance(instance), Value::Class(class)) = (args[0], args[1]) {
+            if let (Value::Instance(instance), Value::Class(class)) = (args[0], args[1]) {
                 let class_ref = vm.gc.deref(instance).class;
                 Ok(Value::Bool(class_ref == class))
             } else {
-                Err(format!("instance_of needs a class and a string with the same name of the class, found {} {}", args[0].type_of(), args[1].type_of()))
+                Err(format!(
+                    "instanceof needs an instance and a class, found {} {}",
+                    args[0].type_of(),
+                    args[1].type_of()
+                ))
             }
         }
         _ => Err("instanceof needs two arguments".to_owned()),

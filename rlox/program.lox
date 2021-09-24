@@ -1,5 +1,5 @@
-class Prova {}
-class Prova2 {}
-var a = Prova();
-var b = Prova;
-print instanceof(a, b);
+var b = true;
+
+for (var a = 0; a < 10 or b; a++) {
+    print a;
+}
