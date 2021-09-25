@@ -850,7 +850,7 @@ impl Vm {
                 }
                 _ => {
                     Err(self
-                        .runtime_error(&format!("Array doesn't have {} as method.", method_name)))
+                        .runtime_error(&format!("Array daoesn't have {} as method.", method_name)))
                 }
             }
         } else {
