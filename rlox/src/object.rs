@@ -1,26 +1,10 @@
 use crate::{
-    chunk::Chunk,
-    types::{MutRef, Value},
+    chunk::{Chunk, OpCode},
+    gc::{Gc, GcRef, GcTrace},
+    types::{Table, Value},
     vm::Vm,
 };
-use std::fmt;
-
-#[derive(Clone, PartialEq, Debug, PartialOrd)]
-pub struct LoxString {
-    pub s: String,
-}
-
-impl LoxString {
-    pub fn new(s: String) -> Self {
-        LoxString { s }
-    }
-}
-
-impl fmt::Display for LoxString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.s)
-    }
-}
+use std::{any::Any, fmt, mem};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionUpvalue {
@@ -28,78 +12,36 @@ pub struct FunctionUpvalue {
     pub is_local: bool,
 }
 
-impl FunctionUpvalue {
-    pub fn new(index: usize, is_local: bool) -> Self {
-        FunctionUpvalue { index, is_local }
-    }
-}
-
-impl fmt::Display for FunctionUpvalue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "index: {}, local: {}", self.index, self.is_local)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
-    pub name: String,
+    pub name: GcRef<String>,
     pub upvalues: Vec<FunctionUpvalue>,
-}
-
-impl Function {
-    pub fn new(name: String) -> Self {
-        Function {
-            arity: 0,
-            chunk: Chunk::new(),
-            name,
-            upvalues: Vec::new(),
-        }
-    }
-}
-
-impl fmt::Display for Function {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<fn {}>", self.name)
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FunctionType {
     Function,
-    // Initializer,
-    // Method,
+    Initializer,
+    Method,
     Script,
 }
 
 #[derive(Clone, Copy)]
-pub struct NativeFn(pub fn(&Vm, &[Value]) -> Value);
+pub struct NativeFn(pub fn(&Vm, &[Value]) -> Result<Value, String>);
 
 impl fmt::Debug for NativeFn {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<fn>")
     }
 }
 
 impl PartialEq for NativeFn {
+    #[inline]
     fn eq(&self, _: &Self) -> bool {
         false
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Closure {
-    pub function: Function,
-    pub upvalues: Vec<MutRef<Upvalue>>,
-}
-
-impl Closure {
-    pub fn new(function: Function) -> Self {
-        Closure {
-            function,
-            upvalues: Vec::new(),
-        }
     }
 }
 
@@ -109,11 +51,257 @@ pub struct Upvalue {
     pub closed: Option<Value>,
 }
 
-impl Upvalue {
-    pub fn new(location: usize) -> Self {
-        Upvalue {
-            location,
-            closed: None,
+#[derive(Clone, Debug, PartialEq)]
+pub struct Closure {
+    pub function: GcRef<Function>,
+    pub upvalues: Vec<GcRef<Upvalue>>,
+}
+
+#[derive(Debug)]
+pub struct Class {
+    pub name: GcRef<String>,
+    pub methods: Table,
+}
+
+#[derive(Debug)]
+pub struct Instance {
+    pub class: GcRef<Class>,
+    pub fields: Table,
+}
+
+#[derive(Debug)]
+pub struct BoundMethod {
+    pub receiver: Value,
+    pub method: GcRef<Closure>,
+}
+
+impl GcTrace for String {
+    fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
+        write!(f, "\"{}\"", self)
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        mem::size_of::<String>() + self.as_bytes().len()
+    }
+
+    #[inline]
+    fn trace(&self, _gc: &mut Gc) {}
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for Function {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        let name = &gc.deref(self.name);
+        if name.is_empty() {
+            write!(f, "<script>")
+        } else {
+            write!(f, "<fn {}>", name)
         }
+    }
+
+    fn size(&self) -> usize {
+        mem::size_of::<Function>()
+            + self.upvalues.capacity() * mem::size_of::<FunctionUpvalue>()
+            + self.chunk.code.capacity() * mem::size_of::<OpCode>()
+            + self.chunk.constants.capacity() * mem::size_of::<Value>()
+            + self.chunk.constants.capacity() * mem::size_of::<usize>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_object(self.name);
+        for &constant in &self.chunk.constants {
+            gc.mark_value(constant);
+        }
+    }
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for Upvalue {
+    fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
+        write!(f, "upvalue")
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        mem::size_of::<Upvalue>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        if let Some(obj) = self.closed {
+            gc.mark_value(obj)
+        }
+    }
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for Closure {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        gc.deref(self.function).format(f, gc)
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        mem::size_of::<Closure>() + self.upvalues.capacity() * mem::size_of::<GcRef<Upvalue>>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_object(self.function);
+        for &upvalue in &self.upvalues {
+            gc.mark_object(upvalue);
+        }
+    }
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for Class {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        let name = gc.deref(self.name);
+        write!(f, "{}", name)
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        mem::size_of::<Class>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_object(self.name);
+        gc.mark_table(&self.methods);
+    }
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for Instance {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        let class = gc.deref(self.class);
+        let name = gc.deref(class.name);
+        write!(f, "{} instance", name)
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        mem::size_of::<Class>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_object(self.class);
+        gc.mark_table(&self.fields);
+    }
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for BoundMethod {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        let closure = gc.deref(self.method);
+        closure.format(f, gc)
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        mem::size_of::<BoundMethod>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        gc.mark_value(self.receiver);
+        gc.mark_object(self.method);
+    }
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl GcTrace for Vec<Value> {
+    fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
+        write!(f, "[")?;
+        for i in 0..self.len() {
+            self[i].format(f, gc)?;
+            if i != self.len() - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, "]")
+    }
+
+    #[inline]
+    fn size(&self) -> usize {
+        mem::size_of::<Vec<Value>>() + self.capacity() * mem::size_of::<Value>()
+    }
+
+    fn trace(&self, gc: &mut Gc) {
+        for &value in self {
+            gc.mark_value(value);
+        }
+    }
+
+    #[inline]
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[inline]
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

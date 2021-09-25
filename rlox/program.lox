@@ -1,19 +1,4 @@
-var globalOne;
-var globalTwo;
-
-fun main() {
-  for (var a = 1; a <= 2; a = a + 1) {
-    fun closure() {
-      print a;
-    }
-    if (globalOne == nil) {
-      globalOne = closure;
-    } else {
-      globalTwo = closure;
-    }
-  }
-}
-
-main();
-globalOne();
-globalTwo();
+var a = [1, 2, 3, 4, 5];
+a.reverse();
+print a;
+print a.reverse();

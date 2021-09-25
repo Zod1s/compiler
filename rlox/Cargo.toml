@@ -8,8 +8,13 @@ edition = "2018"
 [dependencies]
 rustyline = "9.0.0"
 cpu-time = "1.0.0"
-# unicode-segmentation = "1.8.0"
 
 [features]
-dump = []
-debug = []
+debug_trace_execution = []
+debug_gc_log = []
+debug_gc_stress = []
+debug_gc = ["debug_gc_log", "debug_gc_stress"]
+
+[dev-dependencies]
+regex = "1.4.5"
+test-generator = "0.3.0"

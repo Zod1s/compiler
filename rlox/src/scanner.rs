@@ -1,15 +1,13 @@
-use std::fmt;
-
 pub struct Scanner<'s> {
-    pub source: &'s str,
-    pub start: usize,
-    pub current: usize,
-    pub line: usize,
+    source: &'s str,
+    start: usize,
+    current: usize,
+    line: usize,
 }
 
 impl<'s> Scanner<'s> {
     pub fn new(source: &'s str) -> Self {
-        Scanner {
+        Self {
             source,
             start: 0,
             current: 0,
@@ -29,15 +27,45 @@ impl<'s> Scanner<'s> {
             match c {
                 '(' => self.make_token(TokenType::LeftParen),
                 ')' => self.make_token(TokenType::RightParen),
+                '[' => self.make_token(TokenType::LeftBracket),
+                ']' => self.make_token(TokenType::RightBracket),
                 '{' => self.make_token(TokenType::LeftBrace),
                 '}' => self.make_token(TokenType::RightBrace),
                 ';' => self.make_token(TokenType::Semicolon),
                 ',' => self.make_token(TokenType::Comma),
                 '.' => self.make_token(TokenType::Dot),
-                '-' => self.make_token(TokenType::Minus),
-                '+' => self.make_token(TokenType::Plus),
-                '/' => self.make_token(TokenType::Slash),
-                '*' => self.make_token(TokenType::Star),
+                '-' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::MinusEqual)
+                    } else if self.match_char('-') {
+                        self.make_token(TokenType::MinusMinus)
+                    } else {
+                        self.make_token(TokenType::Minus)
+                    }
+                }
+                '+' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::PlusEqual)
+                    } else if self.match_char('+') {
+                        self.make_token(TokenType::PlusPlus)
+                    } else {
+                        self.make_token(TokenType::Plus)
+                    }
+                }
+                '/' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::SlashEqual)
+                    } else {
+                        self.make_token(TokenType::Slash)
+                    }
+                }
+                '*' => {
+                    if self.match_char('=') {
+                        self.make_token(TokenType::StarEqual)
+                    } else {
+                        self.make_token(TokenType::Star)
+                    }
+                }
                 '!' => {
                     if self.match_char('=') {
                         self.make_token(TokenType::BangEqual)
@@ -55,6 +83,8 @@ impl<'s> Scanner<'s> {
                 '<' => {
                     if self.match_char('=') {
                         self.make_token(TokenType::LessEqual)
+                    } else if self.match_char('|') {
+                        self.make_token(TokenType::LessPipe)
                     } else {
                         self.make_token(TokenType::Less)
                     }
@@ -66,6 +96,7 @@ impl<'s> Scanner<'s> {
                         self.make_token(TokenType::Greater)
                     }
                 }
+                '%' => self.make_token(TokenType::Rem),
                 '"' => self.string(),
                 '0'..='9' => self.number(),
                 'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
@@ -74,18 +105,20 @@ impl<'s> Scanner<'s> {
         }
     }
 
+    #[inline]
     fn at_end(&self) -> bool {
         self.source.chars().count() == self.current
     }
 
+    #[inline]
     fn make_token(&self, token_type: TokenType) -> Token<'s> {
         let lexeme = &self.source[self.start..self.current];
-        Token::new(token_type, lexeme, self.current - self.start, self.line)
+        Token::new(token_type, lexeme, self.line)
     }
 
+    #[inline]
     fn error_token(&self, message: &'s str) -> Token<'s> {
-        let length = message.chars().count();
-        Token::new(TokenType::Error, message, length, self.line)
+        Token::new(TokenType::Error, message, self.line)
     }
 
     fn advance(&mut self) -> char {
@@ -129,10 +162,12 @@ impl<'s> Scanner<'s> {
         }
     }
 
+    #[inline]
     fn peek(&mut self) -> char {
         self.source.chars().nth(self.current).unwrap_or('\0')
     }
 
+    #[inline]
     fn peek_next(&mut self) -> char {
         self.source.chars().nth(self.current + 1).unwrap_or('\0')
     }
@@ -258,25 +293,22 @@ impl<'s> Scanner<'s> {
 pub struct Token<'a> {
     pub token_type: TokenType,
     pub lexeme: &'a str,
-    pub length: usize,
     pub line: usize,
 }
 
 impl<'a> Token<'a> {
-    pub fn new(token_type: TokenType, lexeme: &'a str, length: usize, line: usize) -> Self {
-        Token {
+    pub fn new(token_type: TokenType, lexeme: &'a str, line: usize) -> Self {
+        Self {
             token_type,
             lexeme,
-            length,
             line,
         }
     }
 
     pub fn syntethic(lexeme: &'a str) -> Self {
-        Token {
+        Self {
             token_type: TokenType::Error,
             lexeme,
-            length: lexeme.len(),
             line: 0,
         }
     }
@@ -285,17 +317,26 @@ impl<'a> Token<'a> {
 #[derive(Clone, PartialEq, Debug, Eq, Hash, Copy)]
 pub enum TokenType {
     // Single-character tokens.
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
     Comma,
     Dot,
+    LeftBrace,
+    LeftBracket,
+    LeftParen,
     Minus,
+    MinusEqual,
+    MinusMinus,
+    Rem,
     Plus,
+    PlusEqual,
+    PlusPlus,
+    RightBrace,
+    RightBracket,
+    RightParen,
     Semicolon,
     Slash,
+    SlashEqual,
     Star,
+    StarEqual,
     // One or two character tokens.
     Bang,
     BangEqual,
@@ -305,10 +346,11 @@ pub enum TokenType {
     GreaterEqual,
     Less,
     LessEqual,
+    LessPipe,
     // Literals.
     Identifier,
-    RString,
     Number,
+    RString,
     // Keywords.
     And,
     Class,
@@ -327,55 +369,6 @@ pub enum TokenType {
     Var,
     While,
 
-    Error,
     Eof,
-}
-
-impl fmt::Display for TokenType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            TokenType::LeftParen => write!(f, "   LeftParen"),
-            TokenType::RightParen => write!(f, "  RightParen"),
-            TokenType::LeftBrace => write!(f, "   LeftBrace"),
-            TokenType::RightBrace => write!(f, "  RightBrace"),
-            TokenType::Comma => write!(f, "       Comma"),
-            TokenType::Dot => write!(f, "         Dot"),
-            TokenType::Minus => write!(f, "       Minus"),
-            TokenType::Plus => write!(f, "        Plus"),
-            TokenType::Semicolon => write!(f, "   Semicolon"),
-            TokenType::Slash => write!(f, "       Slash"),
-            TokenType::Star => write!(f, "        Star"),
-            TokenType::Bang => write!(f, "        Bang"),
-            TokenType::BangEqual => write!(f, "   BangEqual"),
-            TokenType::Equal => write!(f, "       Equal"),
-            TokenType::EqualEqual => write!(f, "  EqualEqual"),
-            TokenType::Greater => write!(f, "     Greater"),
-            TokenType::GreaterEqual => write!(f, "GreaterEqual"),
-            TokenType::Less => write!(f, "        Less"),
-            TokenType::LessEqual => write!(f, "   LessEqual"),
-
-            TokenType::Identifier => write!(f, "  Identifier"),
-            TokenType::RString => write!(f, "     String"),
-            TokenType::Number => write!(f, "      Number"),
-
-            TokenType::And => write!(f, "         And"),
-            TokenType::Class => write!(f, "       Class"),
-            TokenType::Else => write!(f, "        Else"),
-            TokenType::False => write!(f, "       False"),
-            TokenType::For => write!(f, "         For"),
-            TokenType::Fun => write!(f, "         Fun"),
-            TokenType::If => write!(f, "          If"),
-            TokenType::Nil => write!(f, "         Nil"),
-            TokenType::Or => write!(f, "          Or"),
-            TokenType::Print => write!(f, "       Print"),
-            TokenType::Return => write!(f, "      Return"),
-            TokenType::Super => write!(f, "       Super"),
-            TokenType::This => write!(f, "        This"),
-            TokenType::True => write!(f, "        True"),
-            TokenType::Var => write!(f, "         Var"),
-            TokenType::While => write!(f, "       While"),
-            TokenType::Error => write!(f, "       Error"),
-            TokenType::Eof => write!(f, "         Eof"),
-        }
-    }
+    Error,
 }
