@@ -6,17 +6,6 @@ use crate::{
 };
 use std::{any::Any, fmt, mem};
 
-#[derive(Clone, PartialEq, Debug, PartialOrd)]
-pub struct LoxString {
-    pub s: String,
-}
-
-impl fmt::Display for LoxString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.s)
-    }
-}
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionUpvalue {
     pub index: usize,
@@ -27,7 +16,7 @@ pub struct FunctionUpvalue {
 pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
-    pub name: GcRef<LoxString>,
+    pub name: GcRef<String>,
     pub upvalues: Vec<FunctionUpvalue>,
 }
 
@@ -43,12 +32,14 @@ pub enum FunctionType {
 pub struct NativeFn(pub fn(&Vm, &[Value]) -> Result<Value, String>);
 
 impl fmt::Debug for NativeFn {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<fn>")
     }
 }
 
 impl PartialEq for NativeFn {
+    #[inline]
     fn eq(&self, _: &Self) -> bool {
         false
     }
@@ -68,7 +59,7 @@ pub struct Closure {
 
 #[derive(Debug)]
 pub struct Class {
-    pub name: GcRef<LoxString>,
+    pub name: GcRef<String>,
     pub methods: Table,
 }
 
@@ -84,26 +75,25 @@ pub struct BoundMethod {
     pub method: GcRef<Closure>,
 }
 
-#[derive(Debug)]
-pub struct Array {
-    pub array: Vec<Value>,
-}
-
-impl GcTrace for LoxString {
+impl GcTrace for String {
     fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "\"{}\"", self)
     }
 
+    #[inline]
     fn size(&self) -> usize {
-        mem::size_of::<String>() + self.s.as_bytes().len()
+        mem::size_of::<String>() + self.as_bytes().len()
     }
 
+    #[inline]
     fn trace(&self, _gc: &mut Gc) {}
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
@@ -111,7 +101,7 @@ impl GcTrace for LoxString {
 
 impl GcTrace for Function {
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
-        let name = &gc.deref(self.name).s;
+        let name = &gc.deref(self.name);
         if name.is_empty() {
             write!(f, "<script>")
         } else {
@@ -134,10 +124,12 @@ impl GcTrace for Function {
         }
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
@@ -148,6 +140,7 @@ impl GcTrace for Upvalue {
         write!(f, "upvalue")
     }
 
+    #[inline]
     fn size(&self) -> usize {
         mem::size_of::<Upvalue>()
     }
@@ -158,10 +151,12 @@ impl GcTrace for Upvalue {
         }
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
@@ -172,6 +167,7 @@ impl GcTrace for Closure {
         gc.deref(self.function).format(f, gc)
     }
 
+    #[inline]
     fn size(&self) -> usize {
         mem::size_of::<Closure>() + self.upvalues.capacity() * mem::size_of::<GcRef<Upvalue>>()
     }
@@ -183,10 +179,12 @@ impl GcTrace for Closure {
         }
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
@@ -198,6 +196,7 @@ impl GcTrace for Class {
         write!(f, "{}", name)
     }
 
+    #[inline]
     fn size(&self) -> usize {
         mem::size_of::<Class>()
     }
@@ -207,10 +206,12 @@ impl GcTrace for Class {
         gc.mark_table(&self.methods);
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
@@ -223,6 +224,7 @@ impl GcTrace for Instance {
         write!(f, "{} instance", name)
     }
 
+    #[inline]
     fn size(&self) -> usize {
         mem::size_of::<Class>()
     }
@@ -232,10 +234,12 @@ impl GcTrace for Instance {
         gc.mark_table(&self.fields);
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
@@ -247,6 +251,7 @@ impl GcTrace for BoundMethod {
         closure.format(f, gc)
     }
 
+    #[inline]
     fn size(&self) -> usize {
         mem::size_of::<BoundMethod>()
     }
@@ -256,42 +261,46 @@ impl GcTrace for BoundMethod {
         gc.mark_object(self.method);
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 }
 
-impl GcTrace for Array {
+impl GcTrace for Vec<Value> {
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         write!(f, "[")?;
-        let array_len = self.array.len();
-        for i in 0..array_len {
-            self.array[i].format(f, gc)?;
-            if i != array_len - 1 {
+        for i in 0..self.len() {
+            self[i].format(f, gc)?;
+            if i != self.len() - 1 {
                 write!(f, ", ")?;
             }
         }
         write!(f, "]")
     }
 
+    #[inline]
     fn size(&self) -> usize {
-        mem::size_of::<Array>() + self.array.capacity() * mem::size_of::<Value>()
+        mem::size_of::<Vec<Value>>() + self.capacity() * mem::size_of::<Value>()
     }
 
     fn trace(&self, gc: &mut Gc) {
-        for &value in &self.array {
+        for &value in self {
             gc.mark_value(value);
         }
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         self
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }

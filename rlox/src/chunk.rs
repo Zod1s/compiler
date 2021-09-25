@@ -6,6 +6,7 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OpCode {
     Add,
+    BuildList(usize),
     Call(usize),
     Class(usize),
     CloseUpvalue,
@@ -16,6 +17,7 @@ pub enum OpCode {
     Div,
     Equal,
     False,
+    GetIndexArray,
     GetGlobal(usize),
     GetLocal(usize),
     GetProperty(usize),
@@ -42,6 +44,7 @@ pub enum OpCode {
     Rem,
     Return,
     ReturnNil,
+    SetIndexArray,
     SetGlobal(usize),
     SetLocal(usize),
     SetProperty(usize),
@@ -55,7 +58,7 @@ pub enum OpCode {
 pub struct Chunk {
     pub code: Vec<OpCode>,
     pub constants: Vec<Value>,
-    pub lines: Vec<(usize, usize)>, // repetition, line
+    lines: Vec<(usize, usize)>, // repetition, line
 }
 
 impl Default for Chunk {
@@ -73,6 +76,7 @@ impl Chunk {
         }
     }
 
+    #[inline]
     pub fn write(&mut self, opcode: OpCode, line: usize) {
         self.code.push(opcode);
         self.add_line(line);
@@ -161,6 +165,7 @@ impl<'s> Disassembler<'s> {
             content.push(format!("{:>4} ", line));
         }
         let instr = match instruction {
+            OpCode::BuildList(value) => self.const_instruction_to_string("OP_BUILD_LIST", *value),
             OpCode::Constant(value) => self.const_instruction_to_string("OP_CONSTANT", *value),
             OpCode::DefineGlobal(value) => {
                 self.const_instruction_to_string("OP_DEFINE_GLOBAL", *value)
@@ -217,6 +222,8 @@ impl<'s> Disassembler<'s> {
             OpCode::Pop => String::from("OP_POP"),
             OpCode::CloseUpvalue => String::from("OP_CLOSE_UPVALUE"),
             OpCode::Inherit => String::from("OP_INHERIT"),
+            OpCode::GetIndexArray => String::from("OP_GET_INDEX_ARRAY"),
+            OpCode::SetIndexArray => String::from("OP_SET_INDEX_ARRAY"),
         };
         content.push(instr);
         content.join(" ")

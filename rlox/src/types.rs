@@ -6,7 +6,7 @@ use std::{any::Any, collections::HashMap, fmt};
 
 #[derive(Clone, PartialEq, Debug, Copy)]
 pub enum Value {
-    Array(GcRef<Array>),
+    Array(GcRef<Vec<Value>>),
     Bool(bool),
     BoundMethod(GcRef<BoundMethod>),
     Class(GcRef<Class>),
@@ -16,7 +16,7 @@ pub enum Value {
     NativeFn(NativeFn),
     Nil,
     Number(f64),
-    VString(GcRef<LoxString>),
+    VString(GcRef<String>),
 }
 
 impl GcTrace for Value {
@@ -36,6 +36,7 @@ impl GcTrace for Value {
         }
     }
 
+    #[inline]
     fn size(&self) -> usize {
         0
     }
@@ -52,10 +53,12 @@ impl GcTrace for Value {
         }
     }
 
+    #[inline]
     fn as_any(&self) -> &dyn Any {
         panic!("Value should not be allocated")
     }
 
+    #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         panic!("Value should not be allocated")
     }
@@ -126,4 +129,4 @@ impl Precedence {
     }
 }
 
-pub type Table = HashMap<GcRef<LoxString>, Value>;
+pub type Table = HashMap<GcRef<String>, Value>;

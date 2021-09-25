@@ -1,4 +1,3 @@
-use crate::object::LoxString;
 use crate::types::{Table, Value};
 use std::{
     any::{type_name, Any},
@@ -51,7 +50,7 @@ impl<T: GcTrace> PartialEq for GcRef<T> {
     }
 }
 
-impl hash::Hash for GcRef<LoxString> {
+impl hash::Hash for GcRef<String> {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         self.index.hash(state)
     }
@@ -62,7 +61,7 @@ pub struct Gc {
     next_gc: usize,
     grey_stack: Vec<usize>,
     pub objects: Vec<Option<GcObject>>,
-    strings: HashMap<String, GcRef<LoxString>>,
+    strings: HashMap<String, GcRef<String>>,
     free_slots: Vec<usize>,
 }
 
@@ -88,11 +87,13 @@ impl Gc {
     }
 
     #[cfg(not(feature = "debug_gc_stress"))]
+    #[inline]
     pub fn should_gc(&self) -> bool {
         self.bytes_allocated > self.next_gc
     }
 
     #[cfg(feature = "debug_gc_stress")]
+    #[inline]
     pub fn should_gc(&self) -> bool {
         true
     }
@@ -136,11 +137,11 @@ impl Gc {
         }
     }
 
-    pub fn intern(&mut self, string: String) -> GcRef<LoxString> {
+    pub fn intern(&mut self, string: String) -> GcRef<String> {
         if let Some(&string_ref) = self.strings.get(&string) {
             string_ref
         } else {
-            let index = self.alloc(LoxString { s: string.clone() });
+            let index = self.alloc(string.clone());
             self.strings.insert(string, index);
             index
         }
@@ -197,6 +198,7 @@ impl Gc {
         );
     }
 
+    #[inline]
     pub fn mark_value(&mut self, value: Value) {
         value.trace(self);
     }
@@ -275,12 +277,14 @@ pub struct GcTraceFormatter<'s, T: GcTrace> {
 }
 
 impl<'s, T: GcTrace> GcTraceFormatter<'s, T> {
+    #[inline]
     pub fn new(value: T, gc: &'s Gc) -> Self {
         GcTraceFormatter { value, gc }
     }
 }
 
 impl<'s, T: GcTrace> fmt::Display for GcTraceFormatter<'s, T> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.value.format(f, self.gc)
     }

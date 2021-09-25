@@ -27,6 +27,8 @@ impl<'s> Scanner<'s> {
             match c {
                 '(' => self.make_token(TokenType::LeftParen),
                 ')' => self.make_token(TokenType::RightParen),
+                '[' => self.make_token(TokenType::LeftBracket),
+                ']' => self.make_token(TokenType::RightBracket),
                 '{' => self.make_token(TokenType::LeftBrace),
                 '}' => self.make_token(TokenType::RightBrace),
                 ';' => self.make_token(TokenType::Semicolon),
@@ -103,15 +105,18 @@ impl<'s> Scanner<'s> {
         }
     }
 
+    #[inline]
     fn at_end(&self) -> bool {
         self.source.chars().count() == self.current
     }
 
+    #[inline]
     fn make_token(&self, token_type: TokenType) -> Token<'s> {
         let lexeme = &self.source[self.start..self.current];
         Token::new(token_type, lexeme, self.line)
     }
 
+    #[inline]
     fn error_token(&self, message: &'s str) -> Token<'s> {
         Token::new(TokenType::Error, message, self.line)
     }
@@ -157,10 +162,12 @@ impl<'s> Scanner<'s> {
         }
     }
 
+    #[inline]
     fn peek(&mut self) -> char {
         self.source.chars().nth(self.current).unwrap_or('\0')
     }
 
+    #[inline]
     fn peek_next(&mut self) -> char {
         self.source.chars().nth(self.current + 1).unwrap_or('\0')
     }
@@ -313,6 +320,7 @@ pub enum TokenType {
     Comma,
     Dot,
     LeftBrace,
+    LeftBracket,
     LeftParen,
     Minus,
     MinusEqual,
@@ -322,6 +330,7 @@ pub enum TokenType {
     PlusEqual,
     PlusPlus,
     RightBrace,
+    RightBracket,
     RightParen,
     Semicolon,
     Slash,

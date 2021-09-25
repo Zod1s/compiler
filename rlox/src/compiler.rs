@@ -1,7 +1,7 @@
 use crate::{
     chunk::{Chunk, Disassembler, OpCode},
     gc::{Gc, GcRef},
-    object::{Function, FunctionType, FunctionUpvalue, LoxString},
+    object::{Function, FunctionType, FunctionUpvalue},
     scanner::*,
     types::{InterpretError, Precedence, Value},
 };
@@ -48,6 +48,13 @@ impl<'s> Parser<'s> {
             Precedence::Call,
         );
         rule(TokenType::RightParen, None, None, Precedence::None);
+        rule(
+            TokenType::LeftBracket,
+            Some(Parser::array),
+            Some(Parser::index),
+            Precedence::Call,
+        );
+        rule(TokenType::RightBracket, None, None, Precedence::None);
         rule(TokenType::LeftBrace, None, None, Precedence::None);
         rule(TokenType::RightBrace, None, None, Precedence::None);
         rule(TokenType::Comma, None, None, Precedence::None);
@@ -383,6 +390,7 @@ impl<'s> Parser<'s> {
         self.emit_opcode(OpCode::Print);
     }
 
+    #[inline]
     fn begin_scope(&mut self) {
         self.compiler.scope_depth += 1;
     }
@@ -506,6 +514,7 @@ impl<'s> Parser<'s> {
         self.emit_pop();
     }
 
+    #[inline]
     fn variable(&mut self, can_assign: bool) {
         self.named_variable(self.previous, can_assign);
     }
@@ -581,13 +590,42 @@ impl<'s> Parser<'s> {
         let value = self.previous.lexeme.parse::<f64>();
         match value {
             Ok(value) => self.emit_constant(Value::Number(value)),
-            Err(_) => self.error_at_current("Expect number when converting string to number."),
+            Err(_) => self.error_at_current("Expect number when parsing number."),
         }
     }
 
     fn grouping(&mut self, _can_assign: bool) {
         self.expression();
         self.consume(TokenType::RightParen, "Expect ')' after expression.");
+    }
+
+    fn array(&mut self, _can_assign: bool) {
+        let mut length = 0;
+        if !self.check(TokenType::RightBracket) {
+            loop {
+                self.expression();
+                length += 1;
+                if !self.match_token(TokenType::Comma) {
+                    break;
+                }
+            }
+        }
+        self.consume(TokenType::RightBracket, "Expect ']' after list.");
+        self.emit_opcode(OpCode::BuildList(length));
+    }
+
+    fn index(&mut self, can_assign: bool) {
+        self.expression();
+        self.consume(
+            TokenType::RightBracket,
+            "Expect ']' after indexing expression.",
+        );
+        if can_assign && self.match_token(TokenType::Equal) {
+            self.expression();
+            self.emit_opcode(OpCode::SetIndexArray);
+        } else {
+            self.emit_opcode(OpCode::GetIndexArray);
+        }
     }
 
     fn unary(&mut self, _can_assign: bool) {
@@ -801,10 +839,12 @@ impl<'s> Parser<'s> {
         };
     }
 
+    #[inline]
     fn start_loop(&self) -> usize {
         self.compiler.function.chunk.code.len()
     }
 
+    #[inline]
     fn code_len(&self) -> usize {
         self.compiler.function.chunk.code.len()
     }
@@ -891,12 +931,14 @@ impl<'s> Parser<'s> {
         result
     }
 
+    #[inline]
     fn get_rule(&self, key: &TokenType) -> &ParseRule<'s> {
         self.parse_rules.get(key).unwrap()
     }
 
     // chunk manipulation
 
+    #[inline]
     fn emit_opcode(&mut self, opcode: OpCode) {
         self.compiler
             .function
@@ -918,6 +960,7 @@ impl<'s> Parser<'s> {
         self.emit_opcode(OpCode::Constant(index));
     }
 
+    #[inline]
     fn make_constant(&mut self, constant: Value) -> usize {
         self.compiler.function.chunk.add_constant(constant)
     }
@@ -927,20 +970,24 @@ impl<'s> Parser<'s> {
         self.compiler.function.chunk.code.len() - 1
     }
 
+    #[inline]
     fn emit_loop(&mut self, start: usize) {
         self.emit_opcode(OpCode::Loop(self.code_len() - start));
     }
 
+    #[inline]
     fn emit_pop(&mut self) {
         self.emit_opcode(OpCode::Pop);
     }
 
     // error handling
 
+    #[inline]
     fn error_at_current(&mut self, message: &str) {
         self.error_at(self.current, message);
     }
 
+    #[inline]
     fn error(&mut self, message: &str) {
         self.error_at(self.previous, message);
     }
@@ -980,7 +1027,7 @@ struct Compiler<'a> {
 }
 
 impl<'a> Compiler<'a> {
-    fn new(name: GcRef<LoxString>, function_type: FunctionType) -> Box<Self> {
+    fn new(name: GcRef<String>, function_type: FunctionType) -> Box<Self> {
         let mut compiler = Compiler {
             enclosing: None,
             scope_depth: 0,
@@ -1063,26 +1110,7 @@ struct Local<'a> {
     is_captured: bool,
 }
 
-// impl<'a> Local<'a> {
-//     fn new(name: Token<'a>, depth: isize) -> Self {
-//         Self {
-//             name,
-//             depth,
-//             is_captured: false,
-//         }
-//     }
-// }
-
 struct ClassCompiler {
     enclosing: Option<Box<ClassCompiler>>,
     has_superclass: bool,
 }
-
-// impl ClassCompiler {
-//     fn new(enclosing: Option<Box<ClassCompiler>>) -> Box<Self> {
-//         Box::new(Self {
-//             enclosing,
-//             has_superclass: false,
-//         })
-//     }
-// }

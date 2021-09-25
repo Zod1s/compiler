@@ -17,7 +17,7 @@ pub struct Vm {
     frames: Vec<CallFrame>,
     open_upvalues: Vec<GcRef<Upvalue>>,
     start_time: ProcessTime,
-    init_string: GcRef<LoxString>,
+    init_string: GcRef<String>,
 }
 
 impl Vm {
@@ -76,13 +76,13 @@ impl Vm {
     pub fn dump(&mut self, code: &str, file: &str) -> Result<(), InterpretError> {
         let function = compiler::compile(code, &mut self.gc)?;
         let function = self.gc.deref(function);
-        let name = &self.gc.deref(function.name).s;
+        let name = &self.gc.deref(function.name);
         let disassembler = Disassembler::new(&self.gc, &function.chunk, Some(&self.stack));
         let mut content = vec![disassembler.disassemble_to_string(name)];
         for gcref in self.gc.objects.iter().rev().flatten() {
             if let Some(fun) = gcref.object.as_any().downcast_ref::<Function>() {
                 if fun.name != function.name {
-                    let name = &self.gc.deref(fun.name).s;
+                    let name = &self.gc.deref(fun.name);
                     let disassembler = Disassembler::new(&self.gc, &fun.chunk, Some(&self.stack));
                     content.push(disassembler.disassemble_to_string(name));
                 }
@@ -92,10 +92,12 @@ impl Vm {
         Ok(())
     }
 
+    #[inline]
     pub fn set_debug(&mut self) {
         self.debug = true;
     }
 
+    #[inline]
     pub fn unset_debug(&mut self) {
         self.debug = false;
     }
@@ -115,21 +117,21 @@ impl Vm {
         if let Value::Number(n) = self.pop() {
             Ok(n)
         } else {
-            match self.runtime_error(&format!("Error: no number found on stack {}", msg)) {
-                Err(e) => Err(e),
-                Ok(_) => panic!(),
-            }
+            Err(self.runtime_error(&format!("Error: no number found on stack {}", msg)))
         }
     }
 
+    #[inline]
     fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
 
+    #[inline]
     fn push_number(&mut self, n: f64) {
         self.stack.push(Value::Number(n));
     }
 
+    #[inline]
     fn peek(&self, index: usize) -> Value {
         self.stack[self.stack.len() - 1 - index]
     }
@@ -172,9 +174,21 @@ impl Vm {
                         let string = self.intern(new);
                         self.push(Value::VString(string));
                     }
-                    _ => self
-                        .runtime_error("Arguments must be both numbers or at least one string.")?,
+                    _ => {
+                        return Err(self.runtime_error(
+                            "Arguments must be both numbers or at least one string.",
+                        ))
+                    }
                 },
+                OpCode::BuildList(length) => {
+                    let mut vec: Vec<Value> = Vec::new();
+                    for _ in 0..length {
+                        vec.push(self.pop());
+                    }
+                    vec.reverse();
+                    let vec = self.gc.alloc(vec);
+                    self.push(Value::Array(vec));
+                }
                 OpCode::Call(arg_count) => self.call_value(self.peek(arg_count), arg_count)?,
                 OpCode::Class(value) => {
                     if let Value::VString(name) = self.current_chunk().constants[value] {
@@ -185,7 +199,8 @@ impl Vm {
                         let class = self.alloc(class);
                         self.push(Value::Class(class));
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
                 OpCode::CloseUpvalue => {
@@ -212,7 +227,7 @@ impl Vm {
                         let closure = self.alloc(closure);
                         self.push(Value::Closure(closure));
                     }
-                    _ => self.runtime_error("Error: no function found.")?,
+                    _ => return Err(self.runtime_error("Error: no function found.")),
                 },
                 OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
                 OpCode::Decrement => {
@@ -224,25 +239,45 @@ impl Vm {
                         self.globals.insert(string_ref, self.peek(0));
                         self.pop();
                     } else {
-                        self.runtime_error(
+                        return Err(self.runtime_error(
                             "Error: Invalid identifier found for definition on stack.",
-                        )?
+                        ));
                     }
                 }
                 OpCode::Div => self.bin_arith_op(|x, y| x / y, "when dividing")?,
                 OpCode::Equal => self.bin_op(|x, y| x == y)?,
                 OpCode::False => self.push(Value::Bool(false)),
+                OpCode::GetIndexArray => {
+                    let index = self.pop_number("for indexing an array.")?;
+                    if index.fract() != 0.0 {
+                        return Err(
+                            self.runtime_error("Can't index an array with a fractional number.")
+                        );
+                    }
+                    if let Value::Array(array) = self.pop() {
+                        let array = self.gc.deref(array);
+                        let value = array[index as usize];
+                        self.push(value);
+                    } else {
+                        return Err(
+                            self.runtime_error("No array found on stack when indexing an array.")
+                        );
+                    }
+                }
                 OpCode::GetGlobal(index) => {
                     if let Value::VString(string_ref) = self.current_chunk().get_constant(index) {
                         match self.globals.get(&string_ref) {
                             Some(&value) => self.push(value),
-                            None => self.runtime_error(&format!(
-                                "Undefined variable '{}'.",
-                                self.gc.deref(string_ref)
-                            ))?,
+                            None => {
+                                return Err(self.runtime_error(&format!(
+                                    "Undefined variable '{}'.",
+                                    self.gc.deref(string_ref)
+                                )))
+                            }
                         }
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
                 OpCode::GetLocal(slot) => self.push(self.stack[slot + self.current_frame().slot]),
@@ -259,12 +294,12 @@ impl Vm {
                                 self.bind_method(class, name)?;
                             }
                         } else {
-                            self.runtime_error(
+                            return Err(self.runtime_error(
                                 "Error: Invalid identifier found for usage on stack.",
-                            )?
+                            ));
                         }
                     } else {
-                        self.runtime_error("Only instances have properties.")?
+                        return Err(self.runtime_error("Only instances have properties."));
                     }
                 }
                 OpCode::GetSuper(slot) => {
@@ -272,10 +307,11 @@ impl Vm {
                         if let Value::Class(superclass) = self.pop() {
                             self.bind_method(superclass, name)?
                         } else {
-                            self.runtime_error("No superclass found on the stack")?
+                            return Err(self.runtime_error("No superclass found on the stack"));
                         }
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
                 OpCode::GetUpvalue(slot) => {
@@ -300,7 +336,11 @@ impl Vm {
                         let result = Value::Bool(a > b);
                         self.push(result);
                     }
-                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
+                    _ => {
+                        return Err(
+                            self.runtime_error("Arguments must be of same type and comparable.")
+                        )
+                    }
                 },
                 OpCode::GreaterEqual => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => {
@@ -312,7 +352,11 @@ impl Vm {
                         let result = Value::Bool(a >= b);
                         self.push(result);
                     }
-                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
+                    _ => {
+                        return Err(
+                            self.runtime_error("Arguments must be of same type and comparable.")
+                        )
+                    }
                 },
                 OpCode::Increment => {
                     let n = self.pop_number("to increment")? + 1.0;
@@ -327,14 +371,15 @@ impl Vm {
                         class.methods = methods;
                         self.pop();
                     } else {
-                        self.runtime_error("Superclass must be a class.")?
+                        return Err(self.runtime_error("Superclass must be a class."));
                     }
                 }
                 OpCode::Invoke((name, count)) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(name) {
                         self.invoke(name, count)?
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
                 OpCode::Jump(offset) => {
@@ -355,7 +400,11 @@ impl Vm {
                         let result = Value::Bool(a < b);
                         self.push(result);
                     }
-                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
+                    _ => {
+                        return Err(
+                            self.runtime_error("Arguments must be of same type and comparable.")
+                        )
+                    }
                 },
                 OpCode::LessEqual => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => {
@@ -367,7 +416,11 @@ impl Vm {
                         let result = Value::Bool(a <= b);
                         self.push(result);
                     }
-                    _ => self.runtime_error("Arguments must be of same type and comparable.")?,
+                    _ => {
+                        return Err(
+                            self.runtime_error("Arguments must be of same type and comparable.")
+                        )
+                    }
                 },
                 OpCode::Loop(offset) => {
                     self.current_frame_mut().ip -= offset + 1;
@@ -376,7 +429,8 @@ impl Vm {
                     if let Value::VString(name) = self.current_chunk().get_constant(slot) {
                         self.define_method(name);
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
                 OpCode::Rem => {
@@ -434,17 +488,29 @@ impl Vm {
                         self.push(Value::Nil);
                     }
                 }
+                OpCode::SetIndexArray => {
+                    let value = self.pop();
+                    let index = self.pop_number("for indexing an array")?;
+                    if let Value::Array(arrayref) = self.pop() {
+                        let array = self.gc.deref_mut(arrayref);
+                        array[index as usize] = value;
+                        self.push(Value::Array(arrayref));
+                    } else {
+                        return Err(self.runtime_error("No array found on stack when indexing."));
+                    }
+                }
                 OpCode::SetGlobal(index) => {
                     if let Value::VString(string_ref) = self.current_chunk().constants[index] {
                         if self.globals.insert(string_ref, self.peek(0)).is_none() {
                             self.globals.remove(&string_ref);
-                            self.runtime_error(&format!(
+                            return Err(self.runtime_error(&format!(
                                 "Undefined variable '{}'.",
                                 self.gc.deref(string_ref)
-                            ))?
+                            )));
                         }
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
                 OpCode::SetLocal(slot) => {
@@ -460,12 +526,12 @@ impl Vm {
                             self.pop();
                             self.push(value);
                         } else {
-                            self.runtime_error(
+                            return Err(self.runtime_error(
                                 "Error: Invalid identifier found for usage on stack.",
-                            )?
+                            ));
                         }
                     } else {
-                        self.runtime_error("Only instances have fields.")?
+                        return Err(self.runtime_error("Only instances have fields."));
                     }
                 }
                 OpCode::SetUpvalue(slot) => {
@@ -484,10 +550,11 @@ impl Vm {
                         if let Value::Class(class) = self.pop() {
                             self.invoke_from_class(class, name, count)?
                         } else {
-                            self.runtime_error("No class found on the stack.")?
+                            return Err(self.runtime_error("No class found on the stack."));
                         }
                     } else {
-                        self.runtime_error("Error: Invalid identifier found for usage on stack.")?
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
                 OpCode::True => self.push(Value::Bool(true)),
@@ -514,41 +581,41 @@ impl Vm {
 
     // error functions
 
-    fn runtime_error(&mut self, message: &str) -> Result<(), InterpretError> {
+    fn runtime_error(&mut self, message: &str) -> InterpretError {
         eprintln!("{}", message);
 
         for frame in self.frames.iter().rev() {
             let closure = self.gc.deref(frame.closure);
             let function = self.gc.deref(closure.function);
             let name = self.gc.deref(function.name);
-            let name = if name.s.is_empty() {
-                "<script>"
-            } else {
-                &name.s
-            };
+            let name = if name.is_empty() { "<script>" } else { &name };
             let line = function.chunk.get_line(frame.ip - 1);
             eprintln!("[line {}] in {}", line, name);
         }
 
         self.stack.clear();
-        Err(InterpretError::Runtime)
+        InterpretError::Runtime
     }
 
     // current pointers
 
+    #[inline]
     fn current_frame(&self) -> &CallFrame {
         self.frames.last().unwrap()
     }
 
+    #[inline]
     fn current_closure(&self) -> &Closure {
         let closure = self.current_frame().closure;
         self.gc.deref(closure)
     }
 
+    #[inline]
     fn current_frame_mut(&mut self) -> &mut CallFrame {
         self.frames.last_mut().unwrap()
     }
 
+    #[inline]
     fn current_chunk(&self) -> &Chunk {
         let function = self.gc.deref(self.current_closure().function);
         &function.chunk
@@ -562,7 +629,7 @@ impl Vm {
                 let left = self.stack.len() - arg_count;
                 let result = match fun.0(self, &self.stack[left..]) {
                     Ok(res) => res,
-                    Err(e) => return self.runtime_error(&e),
+                    Err(e) => return Err(self.runtime_error(&e)),
                 };
                 self.stack.truncate(left - 1);
                 self.push(result);
@@ -583,13 +650,13 @@ impl Vm {
                         if let Value::Closure(method) = method {
                             self.call(method, arg_count)
                         } else {
-                            self.runtime_error("Initializer is not closure")
+                            Err(self.runtime_error("Initializer is not closure"))
                         }
                     }
                     None => {
                         if arg_count != 0 {
                             let msg = format!("Expected 0 arguments but got {}.", arg_count);
-                            self.runtime_error(&msg)
+                            Err(self.runtime_error(&msg))
                         } else {
                             Ok(())
                         }
@@ -604,7 +671,7 @@ impl Vm {
                 self.stack[index] = receiver;
                 self.call(method, arg_count)
             }
-            _ => self.runtime_error("Can only call functions and classes."),
+            _ => Err(self.runtime_error("Can only call functions and classes.")),
         }
     }
 
@@ -616,7 +683,7 @@ impl Vm {
                 "Expected {} arguments but got {}.",
                 function.arity, arg_count
             );
-            self.runtime_error(&msg)
+            Err(self.runtime_error(&msg))
         } else {
             let frame = CallFrame::new(callee, self.stack.len() - arg_count - 1);
             self.frames.push(frame);
@@ -624,6 +691,7 @@ impl Vm {
         }
     }
 
+    #[inline]
     fn define_native(&mut self, name: &str, function: NativeFn) {
         let name = self.intern(name.to_owned());
         self.globals.insert(name, Value::NativeFn(function));
@@ -658,7 +726,7 @@ impl Vm {
         }
     }
 
-    fn define_method(&mut self, name: GcRef<LoxString>) {
+    fn define_method(&mut self, name: GcRef<String>) {
         let method = self.peek(0);
         if let Value::Class(class) = self.peek(1) {
             let class = self.gc.deref_mut(class);
@@ -672,7 +740,7 @@ impl Vm {
     fn bind_method(
         &mut self,
         class: GcRef<Class>,
-        name: GcRef<LoxString>,
+        name: GcRef<String>,
     ) -> Result<(), InterpretError> {
         let class = self.gc.deref(class);
         if let Some(method) = class.methods.get(&name) {
@@ -690,13 +758,13 @@ impl Vm {
             self.push(Value::BoundMethod(bound));
             Ok(())
         } else {
-            let name = &self.gc.deref(name).s;
+            let name = &self.gc.deref(name);
             let message = format!("Undefined property '{}'.", name);
-            self.runtime_error(&message)
+            Err(self.runtime_error(&message))
         }
     }
 
-    fn invoke(&mut self, name: GcRef<LoxString>, arg_count: usize) -> Result<(), InterpretError> {
+    fn invoke(&mut self, name: GcRef<String>, arg_count: usize) -> Result<(), InterpretError> {
         let receiver = self.peek(arg_count);
         if let Value::Instance(instance) = receiver {
             let instance = self.gc.deref(instance);
@@ -708,28 +776,105 @@ impl Vm {
                 let class = instance.class;
                 self.invoke_from_class(class, name, arg_count)
             }
+        } else if let Value::Array(array) = receiver {
+            let method_name = self.gc.deref(name).clone();
+            match &*method_name {
+                "push" => {
+                    if arg_count == 0 {
+                        Err(self.runtime_error("No arguments given to function push."))
+                    } else {
+                        let mut temp = Vec::new();
+                        for _ in 0..arg_count {
+                            temp.push(self.pop());
+                        }
+                        temp.reverse();
+                        self.gc.deref_mut(array).append(&mut temp);
+                        self.pop();
+                        self.push(Value::Nil);
+                        Ok(())
+                    }
+                }
+                "pop" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("Pop requires no arguments."))
+                    } else if let Some(value) = self.gc.deref_mut(array).pop() {
+                        self.pop();
+                        self.push(value);
+                        Ok(())
+                    } else {
+                        Err(self.runtime_error("No element in array when popping from it."))
+                    }
+                }
+                "extend" => {
+                    if arg_count != 1 {
+                        Err(self.runtime_error("Extend requires only one argument."))
+                    } else if let Value::Array(array_ref) = self.pop() {
+                        let mut new_array = self.gc.deref(array_ref).clone();
+                        self.gc.deref_mut(array).append(&mut new_array);
+                        self.pop();
+                        self.push(Value::Nil);
+                        Ok(())
+                    } else {
+                        Err(self.runtime_error("Extend needs an array as argument"))
+                    }
+                }
+                "length" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("Length requires only one argument."))
+                    } else {
+                        self.pop();
+                        self.push_number(self.gc.deref(array).len() as f64);
+                        Ok(())
+                    }
+                }
+                "copy" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("Copy requires only one argument."))
+                    } else {
+                        let new_array = self.gc.deref(array).clone();
+                        let new_array = self.alloc(new_array);
+                        self.pop();
+                        self.push(Value::Array(new_array));
+                        Ok(())
+                    }
+                }
+                "reverse" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("Reverse requires only one argument."))
+                    } else {
+                        self.gc.deref_mut(array).reverse();
+                        self.pop();
+                        self.push(Value::Nil);
+                        Ok(())
+                    }
+                }
+                _ => {
+                    Err(self
+                        .runtime_error(&format!("Array doesn't have {} as method.", method_name)))
+                }
+            }
         } else {
-            self.runtime_error("Only instances have methods.")
+            Err(self.runtime_error("Only instances have methods."))
         }
     }
 
     fn invoke_from_class(
         &mut self,
         class: GcRef<Class>,
-        name: GcRef<LoxString>,
-        arg_count: usize,
+        name: GcRef<String>,
+        count: usize,
     ) -> Result<(), InterpretError> {
         let class = self.gc.deref(class);
         if let Some(&method) = class.methods.get(&name) {
             if let Value::Closure(closure) = method {
-                self.call(closure, arg_count)
+                self.call(closure, count)
             } else {
                 panic!("Got method that is not closure!")
             }
         } else {
-            let name = &self.gc.deref(name).s;
+            let name = &self.gc.deref(name);
             let message = format!("Undefined property '{}'.", name);
-            self.runtime_error(&message)
+            Err(self.runtime_error(&message))
         }
     }
 
@@ -746,12 +891,14 @@ impl Vm {
         }
     }
 
+    #[inline]
     fn alloc<T: GcTrace + 'static + fmt::Debug>(&mut self, object: T) -> GcRef<T> {
         self.collect_garbage();
         self.gc.alloc(object)
     }
 
-    fn intern(&mut self, string: String) -> GcRef<LoxString> {
+    #[inline]
+    fn intern(&mut self, string: String) -> GcRef<String> {
         self.collect_garbage();
         self.gc.intern(string)
     }
