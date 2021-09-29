@@ -1,8 +1,0 @@
-
-0000    4 OP_CONSTANT         1 '<fn a>'
-0001    | OP_DEFINE_GLOBAL    0 '"a"'
-
-0002    6 OP_GET_GLOBAL       2 '"b"'
-0003    | OP_CALL             0
-0004    | OP_POP
-0005    | OP_RETURN
