@@ -1,0 +1,20 @@
+[package]
+name = "rlox"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rustyline = "9.0.0"
+cpu-time = "1.0.0"
+
+[features]
+debug_trace_execution = []
+debug_gc_log = []
+debug_gc_stress = []
+debug_gc = ["debug_gc_log", "debug_gc_stress"]
+
+[dev-dependencies]
+regex = "1.4.5"
+test-generator = "0.3.0"

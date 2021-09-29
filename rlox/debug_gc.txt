@@ -1,0 +1,1926 @@
+    Finished dev [unoptimized + debuginfo] target(s) in 0.45s
+     Running `target/debug/rlox ./tests/manual/gc.lox`
+alloc(id:0, type:alloc::string::String: repr: "init", b:60, t:1048576)
+
+-- gc start
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+collected 0 bytes (from 60 to 60) next at 120
+-- gc end
+
+alloc(id:1, type:alloc::string::String: repr: "clock", b:121, t:120)
+
+-- gc start
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:1
+collected 0 bytes (from 121 to 121) next at 242
+-- gc end
+
+alloc(id:2, type:alloc::string::String: repr: "panic", b:182, t:242)
+
+-- gc start
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:1
+blacken id:2
+collected 0 bytes (from 182 to 182) next at 364
+-- gc end
+
+alloc(id:3, type:alloc::string::String: repr: "sqrt", b:242, t:364)
+
+-- gc start
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:1
+blacken id:3
+blacken id:2
+collected 0 bytes (from 242 to 242) next at 484
+-- gc end
+
+alloc(id:4, type:alloc::string::String: repr: "pow", b:301, t:484)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:1
+blacken id:3
+blacken id:2
+blacken id:4
+collected 0 bytes (from 301 to 301) next at 602
+-- gc end
+
+alloc(id:5, type:alloc::string::String: repr: "square", b:363, t:602)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:1
+blacken id:3
+blacken id:2
+blacken id:5
+blacken id:4
+collected 0 bytes (from 363 to 363) next at 726
+-- gc end
+
+alloc(id:6, type:alloc::string::String: repr: "abs", b:422, t:726)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:6
+blacken id:1
+blacken id:3
+blacken id:2
+blacken id:5
+blacken id:4
+collected 0 bytes (from 422 to 422) next at 844
+-- gc end
+
+alloc(id:7, type:alloc::string::String: repr: "min", b:481, t:844)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:6
+blacken id:1
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:5
+blacken id:4
+collected 0 bytes (from 481 to 481) next at 962
+-- gc end
+
+alloc(id:8, type:alloc::string::String: repr: "max", b:540, t:962)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:1
+blacken id:6
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:5
+blacken id:4
+collected 0 bytes (from 540 to 540) next at 1080
+-- gc end
+
+alloc(id:9, type:alloc::string::String: repr: "floor", b:601, t:1080)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:9
+blacken id:1
+blacken id:6
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:5
+blacken id:4
+collected 0 bytes (from 601 to 601) next at 1202
+-- gc end
+
+alloc(id:10, type:alloc::string::String: repr: "ceil", b:661, t:1202)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:9
+blacken id:1
+blacken id:6
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:10
+blacken id:5
+blacken id:4
+collected 0 bytes (from 661 to 661) next at 1322
+-- gc end
+
+alloc(id:11, type:alloc::string::String: repr: "isBool", b:723, t:1322)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:9
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:10
+blacken id:5
+blacken id:4
+collected 0 bytes (from 723 to 723) next at 1446
+-- gc end
+
+alloc(id:12, type:alloc::string::String: repr: "isClass", b:786, t:1446)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:9
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:12
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:10
+blacken id:5
+blacken id:4
+collected 0 bytes (from 786 to 786) next at 1572
+-- gc end
+
+alloc(id:13, type:alloc::string::String: repr: "isClosure", b:851, t:1572)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:9
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:13
+blacken id:12
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:10
+blacken id:5
+blacken id:4
+collected 0 bytes (from 851 to 851) next at 1702
+-- gc end
+
+alloc(id:14, type:alloc::string::String: repr: "isFunction", b:917, t:1702)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:9
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:14
+blacken id:13
+blacken id:12
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:7
+blacken id:10
+blacken id:5
+blacken id:4
+collected 0 bytes (from 917 to 917) next at 1834
+-- gc end
+
+alloc(id:15, type:alloc::string::String: repr: "isInstance", b:983, t:1834)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:7
+blacken id:4
+collected 0 bytes (from 983 to 983) next at 1966
+-- gc end
+
+alloc(id:16, type:alloc::string::String: repr: "isNil", b:1044, t:1966)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:7
+blacken id:4
+collected 0 bytes (from 1044 to 1044) next at 2088
+-- gc end
+
+alloc(id:17, type:alloc::string::String: repr: "isNumber", b:1108, t:2088)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:7
+blacken id:4
+collected 0 bytes (from 1108 to 1108) next at 2216
+-- gc end
+
+alloc(id:18, type:alloc::string::String: repr: "isString", b:1172, t:2216)
+
+-- gc start
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:7
+blacken id:4
+collected 0 bytes (from 1172 to 1172) next at 2344
+-- gc end
+
+alloc(id:19, type:alloc::string::String: repr: "instanceof", b:1238, t:2344)
+alloc(id:20, type:alloc::string::String: repr: "script", b:1300, t:2344)
+alloc(id:21, type:alloc::string::String: repr: "test_interner", b:1369, t:2344)
+alloc(id:22, type:alloc::string::String: repr: "Testing gc interner...", b:1447, t:2344)
+alloc(id:23, type:alloc::string::String: repr: "unique", b:1509, t:2344)
+alloc(id:24, type:alloc::string::String: repr: "string", b:1571, t:2344)
+alloc(id:25, type:alloc::string::String: repr: "other", b:1632, t:2344)
+alloc(id:26, type:alloc::string::String: repr: "thing", b:1693, t:2344)
+alloc(id:27, type:alloc::string::String: repr: "   unique", b:1758, t:2344)
+alloc(id:28, type:rlox::object::Function: repr: Function { arity: 0, chunk: Chunk { code: [Constant(0), Print, Constant(1), Constant(2), Add, Constant(3), Constant(4), Add, SetLocal(1), Pop, Constant(5), Constant(2), Add, SetLocal(1), Pop, GetLocal(1), Print, ReturnNil], constants: [VString(ref(22:alloc::string::String)), VString(ref(23:alloc::string::String)), VString(ref(24:alloc::string::String)), VString(ref(25:alloc::string::String)), VString(ref(26:alloc::string::String)), VString(ref(27:alloc::string::String))], lines: [(2, 4), (3, 6), (5, 7), (5, 8), (2, 9), (1, 10)] }, name: ref(21:alloc::string::String), upvalues: [] }, b:2862, t:2344)
+alloc(id:29, type:alloc::string::String: repr: "test_string_concat", b:2936, t:2344)
+alloc(id:30, type:alloc::string::String: repr: "Testing string concatenation", b:3020, t:2344)
+alloc(id:31, type:alloc::string::String: repr: "one", b:3079, t:2344)
+alloc(id:32, type:alloc::string::String: repr: "two", b:3138, t:2344)
+alloc(id:33, type:alloc::string::String: repr: "three", b:3199, t:2344)
+alloc(id:34, type:alloc::string::String: repr: "four", b:3259, t:2344)
+alloc(id:35, type:rlox::object::Function: repr: Function { arity: 0, chunk: Chunk { code: [Constant(0), Print, Constant(1), Constant(2), Add, Constant(3), Constant(4), Add, Add, GetLocal(1), Print, ReturnNil], constants: [VString(ref(30:alloc::string::String)), VString(ref(31:alloc::string::String)), VString(ref(32:alloc::string::String)), VString(ref(33:alloc::string::String)), VString(ref(34:alloc::string::String))], lines: [(2, 15), (7, 17), (2, 18), (1, 19)] }, name: ref(29:alloc::string::String), upvalues: [] }, b:3979, t:2344)
+alloc(id:36, type:alloc::string::String: repr: "++++++++++++++END OF THE TEST+++++++++++++++++++++", b:4085, t:2344)
+alloc(id:37, type:rlox::object::Function: repr: Function { arity: 0, chunk: Chunk { code: [Closure(1), DefineGlobal(0), Closure(3), DefineGlobal(2), GetGlobal(0), Call(0), Pop, GetGlobal(2), Call(0), Pop, Constant(4), Print, ReturnNil], constants: [VString(ref(21:alloc::string::String)), Function(ref(28:rlox::object::Function)), VString(ref(29:alloc::string::String)), Function(ref(35:rlox::object::Function)), VString(ref(36:alloc::string::String))], lines: [(2, 10), (2, 19), (3, 21), (3, 22), (3, 24)] }, name: ref(20:alloc::string::String), upvalues: [] }, b:4805, t:2344)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:7
+blacken id:19
+blacken id:4
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:29
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:21
+blacken id:20
+collected 0 bytes (from 4805 to 4805) next at 9610
+-- gc end
+
+alloc(id:38, type:rlox::object::Closure: repr: Closure { function: ref(37:rlox::object::Function), upvalues: [] }, b:4869, t:9610)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:7
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:29
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:21
+blacken id:20
+collected 0 bytes (from 4869 to 4869) next at 9738
+-- gc end
+
+alloc(id:39, type:rlox::object::Closure: repr: Closure { function: ref(28:rlox::object::Function), upvalues: [] }, b:4933, t:9738)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(39:rlox::object::Closure)
+mark(id:39, type:rlox::object::Closure, val:ref(39:rlox::object::Closure))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:7
+blacken id:39
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:21
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+marking ref(28:rlox::object::Function)
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:29
+blacken id:20
+collected 0 bytes (from 4933 to 4933) next at 9866
+-- gc end
+
+alloc(id:40, type:rlox::object::Closure: repr: Closure { function: ref(35:rlox::object::Function), upvalues: [] }, b:4997, t:9866)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(39:rlox::object::Closure)
+mark(id:39, type:rlox::object::Closure, val:ref(39:rlox::object::Closure))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(39:rlox::object::Closure)
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(39:rlox::object::Closure)
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(40:rlox::object::Closure)
+mark(id:40, type:rlox::object::Closure, val:ref(40:rlox::object::Closure))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:40
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:29
+blacken id:7
+blacken id:21
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:39
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+marking ref(28:rlox::object::Function)
+marking ref(29:alloc::string::String)
+marking ref(35:rlox::object::Function)
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:20
+collected 0 bytes (from 4997 to 4997) next at 9994
+-- gc end
+
+alloc(id:41, type:alloc::string::String: repr: "uniquestring", b:5065, t:9994)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(39:rlox::object::Closure)
+mark(id:39, type:rlox::object::Closure, val:ref(39:rlox::object::Closure))
+marking ref(41:alloc::string::String)
+mark(id:41, type:alloc::string::String, val:ref(41:alloc::string::String))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(39:rlox::object::Closure)
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(39:rlox::object::Closure)
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(40:rlox::object::Closure)
+mark(id:40, type:rlox::object::Closure, val:ref(40:rlox::object::Closure))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:40
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:29
+blacken id:7
+blacken id:21
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:41
+blacken id:39
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+marking ref(28:rlox::object::Function)
+marking ref(29:alloc::string::String)
+marking ref(35:rlox::object::Function)
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:20
+collected 0 bytes (from 5065 to 5065) next at 10130
+-- gc end
+
+alloc(id:42, type:alloc::string::String: repr: "otherthing", b:5131, t:10130)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(39:rlox::object::Closure)
+mark(id:39, type:rlox::object::Closure, val:ref(39:rlox::object::Closure))
+marking ref(42:alloc::string::String)
+mark(id:42, type:alloc::string::String, val:ref(42:alloc::string::String))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(39:rlox::object::Closure)
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(39:rlox::object::Closure)
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(40:rlox::object::Closure)
+mark(id:40, type:rlox::object::Closure, val:ref(40:rlox::object::Closure))
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:40
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:29
+blacken id:7
+blacken id:21
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:42
+blacken id:39
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+marking ref(28:rlox::object::Function)
+marking ref(29:alloc::string::String)
+marking ref(35:rlox::object::Function)
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:20
+free (id:41)
+collected 68 bytes (from 5131 to 5063) next at 10126
+-- gc end
+
+alloc(id:41, type:alloc::string::String: repr: "   uniquestring", b:5134, t:10126)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(40:rlox::object::Closure)
+mark(id:40, type:rlox::object::Closure, val:ref(40:rlox::object::Closure))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(40:rlox::object::Closure)
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(39:rlox::object::Closure)
+mark(id:39, type:rlox::object::Closure, val:ref(39:rlox::object::Closure))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(40:rlox::object::Closure)
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:29
+blacken id:7
+blacken id:39
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:21
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:40
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+marking ref(28:rlox::object::Function)
+marking ref(29:alloc::string::String)
+marking ref(35:rlox::object::Function)
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:20
+free (id:41)
+free (id:42)
+collected 137 bytes (from 5134 to 4997) next at 9994
+-- gc end
+
+alloc(id:42, type:alloc::string::String: repr: "onetwo", b:5059, t:9994)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(40:rlox::object::Closure)
+mark(id:40, type:rlox::object::Closure, val:ref(40:rlox::object::Closure))
+marking ref(42:alloc::string::String)
+mark(id:42, type:alloc::string::String, val:ref(42:alloc::string::String))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(40:rlox::object::Closure)
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(39:rlox::object::Closure)
+mark(id:39, type:rlox::object::Closure, val:ref(39:rlox::object::Closure))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(40:rlox::object::Closure)
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:29
+blacken id:7
+blacken id:39
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:21
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:42
+blacken id:40
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+marking ref(28:rlox::object::Function)
+marking ref(29:alloc::string::String)
+marking ref(35:rlox::object::Function)
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:20
+collected 0 bytes (from 5059 to 5059) next at 10118
+-- gc end
+
+alloc(id:41, type:alloc::string::String: repr: "threefour", b:5124, t:10118)
+
+-- gc start
+marking ref(37:rlox::object::Function)
+mark(id:37, type:rlox::object::Function, val:ref(37:rlox::object::Function))
+marking ref(40:rlox::object::Closure)
+mark(id:40, type:rlox::object::Closure, val:ref(40:rlox::object::Closure))
+marking ref(38:rlox::object::Closure)
+mark(id:38, type:rlox::object::Closure, val:ref(38:rlox::object::Closure))
+marking ref(40:rlox::object::Closure)
+marking ref(4:alloc::string::String)
+mark(id:4, type:alloc::string::String, val:ref(4:alloc::string::String))
+marking ref(19:alloc::string::String)
+mark(id:19, type:alloc::string::String, val:ref(19:alloc::string::String))
+marking ref(21:alloc::string::String)
+mark(id:21, type:alloc::string::String, val:ref(21:alloc::string::String))
+marking ref(39:rlox::object::Closure)
+mark(id:39, type:rlox::object::Closure, val:ref(39:rlox::object::Closure))
+marking ref(7:alloc::string::String)
+mark(id:7, type:alloc::string::String, val:ref(7:alloc::string::String))
+marking ref(29:alloc::string::String)
+mark(id:29, type:alloc::string::String, val:ref(29:alloc::string::String))
+marking ref(40:rlox::object::Closure)
+marking ref(15:alloc::string::String)
+mark(id:15, type:alloc::string::String, val:ref(15:alloc::string::String))
+marking ref(13:alloc::string::String)
+mark(id:13, type:alloc::string::String, val:ref(13:alloc::string::String))
+marking ref(10:alloc::string::String)
+mark(id:10, type:alloc::string::String, val:ref(10:alloc::string::String))
+marking ref(9:alloc::string::String)
+mark(id:9, type:alloc::string::String, val:ref(9:alloc::string::String))
+marking ref(5:alloc::string::String)
+mark(id:5, type:alloc::string::String, val:ref(5:alloc::string::String))
+marking ref(16:alloc::string::String)
+mark(id:16, type:alloc::string::String, val:ref(16:alloc::string::String))
+marking ref(17:alloc::string::String)
+mark(id:17, type:alloc::string::String, val:ref(17:alloc::string::String))
+marking ref(2:alloc::string::String)
+mark(id:2, type:alloc::string::String, val:ref(2:alloc::string::String))
+marking ref(3:alloc::string::String)
+mark(id:3, type:alloc::string::String, val:ref(3:alloc::string::String))
+marking ref(8:alloc::string::String)
+mark(id:8, type:alloc::string::String, val:ref(8:alloc::string::String))
+marking ref(14:alloc::string::String)
+mark(id:14, type:alloc::string::String, val:ref(14:alloc::string::String))
+marking ref(18:alloc::string::String)
+mark(id:18, type:alloc::string::String, val:ref(18:alloc::string::String))
+marking ref(11:alloc::string::String)
+mark(id:11, type:alloc::string::String, val:ref(11:alloc::string::String))
+marking ref(6:alloc::string::String)
+mark(id:6, type:alloc::string::String, val:ref(6:alloc::string::String))
+marking ref(1:alloc::string::String)
+mark(id:1, type:alloc::string::String, val:ref(1:alloc::string::String))
+marking ref(12:alloc::string::String)
+mark(id:12, type:alloc::string::String, val:ref(12:alloc::string::String))
+marking ref(0:alloc::string::String)
+mark(id:0, type:alloc::string::String, val:ref(0:alloc::string::String))
+blacken id:0
+blacken id:12
+blacken id:1
+blacken id:6
+blacken id:11
+blacken id:18
+blacken id:14
+blacken id:8
+blacken id:3
+blacken id:2
+blacken id:17
+blacken id:16
+blacken id:5
+blacken id:9
+blacken id:10
+blacken id:13
+blacken id:15
+blacken id:29
+blacken id:7
+blacken id:39
+marking ref(28:rlox::object::Function)
+mark(id:28, type:rlox::object::Function, val:ref(28:rlox::object::Function))
+blacken id:28
+marking ref(21:alloc::string::String)
+marking ref(22:alloc::string::String)
+mark(id:22, type:alloc::string::String, val:ref(22:alloc::string::String))
+marking ref(23:alloc::string::String)
+mark(id:23, type:alloc::string::String, val:ref(23:alloc::string::String))
+marking ref(24:alloc::string::String)
+mark(id:24, type:alloc::string::String, val:ref(24:alloc::string::String))
+marking ref(25:alloc::string::String)
+mark(id:25, type:alloc::string::String, val:ref(25:alloc::string::String))
+marking ref(26:alloc::string::String)
+mark(id:26, type:alloc::string::String, val:ref(26:alloc::string::String))
+marking ref(27:alloc::string::String)
+mark(id:27, type:alloc::string::String, val:ref(27:alloc::string::String))
+blacken id:27
+blacken id:26
+blacken id:25
+blacken id:24
+blacken id:23
+blacken id:22
+blacken id:21
+blacken id:19
+blacken id:4
+blacken id:38
+marking ref(37:rlox::object::Function)
+blacken id:40
+marking ref(35:rlox::object::Function)
+mark(id:35, type:rlox::object::Function, val:ref(35:rlox::object::Function))
+blacken id:35
+marking ref(29:alloc::string::String)
+marking ref(30:alloc::string::String)
+mark(id:30, type:alloc::string::String, val:ref(30:alloc::string::String))
+marking ref(31:alloc::string::String)
+mark(id:31, type:alloc::string::String, val:ref(31:alloc::string::String))
+marking ref(32:alloc::string::String)
+mark(id:32, type:alloc::string::String, val:ref(32:alloc::string::String))
+marking ref(33:alloc::string::String)
+mark(id:33, type:alloc::string::String, val:ref(33:alloc::string::String))
+marking ref(34:alloc::string::String)
+mark(id:34, type:alloc::string::String, val:ref(34:alloc::string::String))
+blacken id:34
+blacken id:33
+blacken id:32
+blacken id:31
+blacken id:30
+blacken id:37
+marking ref(20:alloc::string::String)
+mark(id:20, type:alloc::string::String, val:ref(20:alloc::string::String))
+marking ref(21:alloc::string::String)
+marking ref(28:rlox::object::Function)
+marking ref(29:alloc::string::String)
+marking ref(35:rlox::object::Function)
+marking ref(36:alloc::string::String)
+mark(id:36, type:alloc::string::String, val:ref(36:alloc::string::String))
+blacken id:36
+blacken id:20
+free (id:41)
+free (id:42)
+collected 127 bytes (from 5124 to 4997) next at 9994
+-- gc end
+
+alloc(id:42, type:alloc::string::String: repr: "onetwothreefour", b:5068, t:9994)
