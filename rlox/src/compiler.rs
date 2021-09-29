@@ -1,5 +1,5 @@
 use crate::{
-    chunk::{Chunk, Disassembler, OpCode},
+    chunk::{Disassembler, OpCode},
     gc::{Gc, GcRef},
     object::{Function, FunctionType, FunctionUpvalue},
     scanner::*,
@@ -1032,12 +1032,7 @@ impl<'a> Compiler<'a> {
             enclosing: None,
             scope_depth: 0,
             locals: Vec::new(),
-            function: Function {
-                arity: 0,
-                chunk: Chunk::new(),
-                name,
-                upvalues: Vec::new(),
-            },
+            function: Function::new(name),
             function_type,
         };
         let token = match function_type {
@@ -1098,7 +1093,7 @@ impl<'a> Compiler<'a> {
                 return i;
             }
         }
-        let upvalue = FunctionUpvalue { index, is_local };
+        let upvalue = FunctionUpvalue::new(index, is_local);
         self.function.upvalues.push(upvalue);
         self.function.upvalues.len() - 1
     }

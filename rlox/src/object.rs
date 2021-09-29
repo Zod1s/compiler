@@ -12,12 +12,29 @@ pub struct FunctionUpvalue {
     pub is_local: bool,
 }
 
+impl FunctionUpvalue {
+    pub fn new(index: usize, is_local: bool) -> Self {
+        Self { index, is_local }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
     pub name: GcRef<String>,
     pub upvalues: Vec<FunctionUpvalue>,
+}
+
+impl Function {
+    pub fn new(name: GcRef<String>) -> Self {
+        Self {
+            arity: 0,
+            chunk: Chunk::new(),
+            name,
+            upvalues: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -51,10 +68,28 @@ pub struct Upvalue {
     pub closed: Option<Value>,
 }
 
+impl Upvalue {
+    pub fn new(location: usize) -> Self {
+        Self {
+            location,
+            closed: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Closure {
     pub function: GcRef<Function>,
     pub upvalues: Vec<GcRef<Upvalue>>,
+}
+
+impl Closure {
+    pub fn new(function: GcRef<Function>) -> Self {
+        Self {
+            function,
+            upvalues: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -63,16 +98,40 @@ pub struct Class {
     pub methods: Table,
 }
 
-#[derive(Debug)]
+impl Class {
+    pub fn new(name: GcRef<String>) -> Self {
+        Self {
+            name,
+            methods: Table::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Instance {
     pub class: GcRef<Class>,
     pub fields: Table,
+}
+
+impl Instance {
+    pub fn new(class: GcRef<Class>) -> Self {
+        Self {
+            class,
+            fields: Table::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct BoundMethod {
     pub receiver: Value,
     pub method: GcRef<Closure>,
+}
+
+impl BoundMethod {
+    pub fn new(receiver: Value, method: GcRef<Closure>) -> Self {
+        Self { receiver, method }
+    }
 }
 
 impl GcTrace for String {

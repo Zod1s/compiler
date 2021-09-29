@@ -64,11 +64,8 @@ impl Vm {
 
     pub fn interpret(&mut self, code: &str) -> Result<(), InterpretError> {
         let function = compiler::compile(code, &mut self.gc)?;
-        self.push(Value::Function(function));
-        let closure = self.alloc(Closure {
-            function,
-            upvalues: Vec::new(),
-        });
+        self.push(Value::Function(function))?;
+        let closure = self.alloc(Closure::new(function));
         self.frames.push(CallFrame::new(closure, 0));
         self.run()
     }
@@ -121,14 +118,22 @@ impl Vm {
         }
     }
 
-    #[inline]
-    fn push(&mut self, value: Value) {
-        self.stack.push(value);
+    fn push(&mut self, value: Value) -> Result<(), InterpretError> {
+        if self.stack.capacity() == isize::MAX as usize {
+            Err(self.runtime_error("Stack full"))
+        } else {
+            self.stack.push(value);
+            Ok(())
+        }
     }
 
-    #[inline]
-    fn push_number(&mut self, n: f64) {
-        self.stack.push(Value::Number(n));
+    fn push_number(&mut self, n: f64) -> Result<(), InterpretError> {
+        if self.stack.capacity() == isize::MAX as usize {
+            Err(self.runtime_error("Stack full"))
+        } else {
+            self.stack.push(Value::Number(n));
+            Ok(())
+        }
     }
 
     #[inline]
@@ -152,27 +157,33 @@ impl Vm {
 
             match instruction {
                 OpCode::Add => match (self.pop(), self.pop()) {
-                    (Value::Number(b), Value::Number(a)) => {
-                        self.push(Value::Number(a + b));
-                    }
+                    (Value::Number(b), Value::Number(a)) => self.push(Value::Number(a + b))?,
                     (Value::VString(b), Value::VString(a)) => {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let new = format!("{}{}", a, b);
                         let string = self.intern(new);
-                        self.push(Value::VString(string));
+                        self.push(Value::VString(string))?
                     }
                     (Value::VString(b), Value::Number(a)) => {
                         let b = self.gc.deref(b);
                         let new = format!("{}{}", a, b);
                         let string = self.intern(new);
-                        self.push(Value::VString(string));
+                        self.push(Value::VString(string))?
                     }
                     (Value::Number(b), Value::VString(a)) => {
                         let a = self.gc.deref(a);
                         let new = format!("{}{}", a, b);
                         let string = self.intern(new);
-                        self.push(Value::VString(string));
+                        self.push(Value::VString(string))?
+                    }
+                    (Value::Array(b), Value::Array(a)) => {
+                        let a = self.gc.deref(a);
+                        let b = self.gc.deref(b);
+                        let mut c = a.clone();
+                        c.extend(b);
+                        let c = self.alloc(c);
+                        self.push(Value::Array(c))?
                     }
                     _ => {
                         return Err(self.runtime_error(
@@ -187,17 +198,14 @@ impl Vm {
                     }
                     vec.reverse();
                     let vec = self.gc.alloc(vec);
-                    self.push(Value::Array(vec));
+                    self.push(Value::Array(vec))?
                 }
                 OpCode::Call(arg_count) => self.call_value(self.peek(arg_count), arg_count)?,
                 OpCode::Class(value) => {
                     if let Value::VString(name) = self.current_chunk().constants[value] {
-                        let class = Class {
-                            name,
-                            methods: Table::new(),
-                        };
+                        let class = Class::new(name);
                         let class = self.alloc(class);
-                        self.push(Value::Class(class));
+                        self.push(Value::Class(class))?
                     } else {
                         return Err(self
                             .runtime_error("Error: Invalid identifier found for usage on stack."));
@@ -210,10 +218,7 @@ impl Vm {
                 OpCode::Closure(index) => match self.current_chunk().get_constant(index) {
                     Value::Function(function) => {
                         let upvalue_count = self.gc.deref(function).upvalues.len();
-                        let mut closure = Closure {
-                            function,
-                            upvalues: Vec::new(),
-                        };
+                        let mut closure = Closure::new(function);
 
                         for i in 0..upvalue_count {
                             let upvalue = self.gc.deref(function).upvalues[i];
@@ -225,14 +230,14 @@ impl Vm {
                             closure.upvalues.push(value);
                         }
                         let closure = self.alloc(closure);
-                        self.push(Value::Closure(closure));
+                        self.push(Value::Closure(closure))?
                     }
                     _ => return Err(self.runtime_error("Error: no function found.")),
                 },
-                OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index)),
+                OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index))?,
                 OpCode::Decrement => {
                     let n = self.pop_number("to decrement")? - 1.0;
-                    self.push_number(n);
+                    self.push_number(n)?
                 }
                 OpCode::DefineGlobal(index) => {
                     if let Value::VString(string_ref) = self.current_chunk().constants[index] {
@@ -246,7 +251,9 @@ impl Vm {
                 }
                 OpCode::Div => self.bin_arith_op(|x, y| x / y, "when dividing")?,
                 OpCode::Equal => self.bin_op(|x, y| x == y)?,
-                OpCode::False => self.push(Value::Bool(false)),
+                OpCode::False => {
+                    self.push(Value::Bool(false))?;
+                }
                 OpCode::GetIndexArray => {
                     let index = self.pop_number("for indexing an array.")?;
                     if index.fract() != 0.0 {
@@ -257,7 +264,7 @@ impl Vm {
                     if let Value::Array(array) = self.pop() {
                         let array = self.gc.deref(array);
                         let value = array[index as usize];
-                        self.push(value);
+                        self.push(value)?
                     } else {
                         return Err(
                             self.runtime_error("No array found on stack when indexing an array.")
@@ -267,7 +274,7 @@ impl Vm {
                 OpCode::GetGlobal(index) => {
                     if let Value::VString(string_ref) = self.current_chunk().get_constant(index) {
                         match self.globals.get(&string_ref) {
-                            Some(&value) => self.push(value),
+                            Some(&value) => self.push(value)?,
                             None => {
                                 return Err(self.runtime_error(&format!(
                                     "Undefined variable '{}'.",
@@ -280,7 +287,9 @@ impl Vm {
                             .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
-                OpCode::GetLocal(slot) => self.push(self.stack[slot + self.current_frame().slot]),
+                OpCode::GetLocal(slot) => {
+                    self.push(self.stack[slot + self.current_frame().slot])?;
+                }
                 OpCode::GetProperty(slot) => {
                     if let Value::Instance(instance) = self.peek(0) {
                         let instance = self.gc.deref(instance);
@@ -288,7 +297,7 @@ impl Vm {
                             let value = instance.fields.get(&name);
                             if let Some(&value) = value {
                                 self.pop();
-                                self.push(value);
+                                self.push(value)?
                             } else {
                                 let class = instance.class;
                                 self.bind_method(class, name)?;
@@ -324,17 +333,15 @@ impl Vm {
                             self.stack[upvalue.location]
                         }
                     };
-                    self.push(value);
+                    self.push(value)?
                 }
                 OpCode::Greater => match (self.pop(), self.pop()) {
-                    (Value::Number(b), Value::Number(a)) => {
-                        self.push(Value::Bool(a > b));
-                    }
+                    (Value::Number(b), Value::Number(a)) => self.push(Value::Bool(a > b))?,
                     (Value::VString(b), Value::VString(a)) => {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a > b);
-                        self.push(result);
+                        self.push(result)?
                     }
                     _ => {
                         return Err(
@@ -343,14 +350,12 @@ impl Vm {
                     }
                 },
                 OpCode::GreaterEqual => match (self.pop(), self.pop()) {
-                    (Value::Number(b), Value::Number(a)) => {
-                        self.push(Value::Bool(a >= b));
-                    }
+                    (Value::Number(b), Value::Number(a)) => self.push(Value::Bool(a >= b))?,
                     (Value::VString(b), Value::VString(a)) => {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a >= b);
-                        self.push(result);
+                        self.push(result)?
                     }
                     _ => {
                         return Err(
@@ -360,7 +365,7 @@ impl Vm {
                 },
                 OpCode::Increment => {
                     let n = self.pop_number("to increment")? + 1.0;
-                    self.push_number(n);
+                    self.push_number(n)?
                 }
                 OpCode::Inherit => {
                     let pair = (self.peek(0), self.peek(1));
@@ -391,14 +396,12 @@ impl Vm {
                     }
                 }
                 OpCode::Less => match (self.pop(), self.pop()) {
-                    (Value::Number(b), Value::Number(a)) => {
-                        self.push(Value::Bool(a < b));
-                    }
+                    (Value::Number(b), Value::Number(a)) => self.push(Value::Bool(a < b))?,
                     (Value::VString(b), Value::VString(a)) => {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a < b);
-                        self.push(result);
+                        self.push(result)?
                     }
                     _ => {
                         return Err(
@@ -407,14 +410,12 @@ impl Vm {
                     }
                 },
                 OpCode::LessEqual => match (self.pop(), self.pop()) {
-                    (Value::Number(b), Value::Number(a)) => {
-                        self.push(Value::Bool(a <= b));
-                    }
+                    (Value::Number(b), Value::Number(a)) => self.push(Value::Bool(a <= b))?,
                     (Value::VString(b), Value::VString(a)) => {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a <= b);
-                        self.push(result);
+                        self.push(result)?
                     }
                     _ => {
                         return Err(
@@ -427,7 +428,7 @@ impl Vm {
                 }
                 OpCode::Method(slot) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(slot) {
-                        self.define_method(name);
+                        self.define_method(name)?
                     } else {
                         return Err(self
                             .runtime_error("Error: Invalid identifier found for usage on stack."));
@@ -442,18 +443,18 @@ impl Vm {
                         let a = a as usize;
                         let b = b as usize;
                         let rem = a % b;
-                        self.push(Value::Number(rem as f64));
+                        self.push(Value::Number(rem as f64))?
                     }
                 }
                 OpCode::Mul => self.bin_arith_op(|x, y| x * y, "when multiplying")?,
                 OpCode::Negate => {
                     let n = self.pop_number("to negate")?;
-                    self.push(Value::Number(-n));
+                    self.push(Value::Number(-n))?
                 }
-                OpCode::Nil => self.push(Value::Nil),
+                OpCode::Nil => self.push(Value::Nil)?,
                 OpCode::Not => {
                     let value = self.pop().is_false();
-                    self.push(Value::Bool(value));
+                    self.push(Value::Bool(value))?
                 }
                 OpCode::NotEqual => self.bin_op(|x, y| x != y)?,
                 OpCode::Pop => {
@@ -475,7 +476,7 @@ impl Vm {
                         return Ok(());
                     } else {
                         self.stack.truncate(frame.slot);
-                        self.push(result);
+                        self.push(result)?
                     }
                 }
                 OpCode::ReturnNil => {
@@ -485,7 +486,7 @@ impl Vm {
                         return Ok(());
                     } else {
                         self.stack.truncate(frame.slot);
-                        self.push(Value::Nil);
+                        self.push(Value::Nil)?
                     }
                 }
                 OpCode::SetIndexArray => {
@@ -494,7 +495,7 @@ impl Vm {
                     if let Value::Array(arrayref) = self.pop() {
                         let array = self.gc.deref_mut(arrayref);
                         array[index as usize] = value;
-                        self.push(Value::Array(arrayref));
+                        self.push(Value::Array(arrayref))?
                     } else {
                         return Err(self.runtime_error("No array found on stack when indexing."));
                     }
@@ -524,7 +525,7 @@ impl Vm {
                             let instance = self.gc.deref_mut(instance);
                             instance.fields.insert(name, value);
                             self.pop();
-                            self.push(value);
+                            self.push(value)?
                         } else {
                             return Err(self.runtime_error(
                                 "Error: Invalid identifier found for usage on stack.",
@@ -557,7 +558,7 @@ impl Vm {
                             .runtime_error("Error: Invalid identifier found for usage on stack."));
                     }
                 }
-                OpCode::True => self.push(Value::Bool(true)),
+                OpCode::True => self.push(Value::Bool(true))?,
             }
         }
     }
@@ -569,14 +570,12 @@ impl Vm {
             self.pop_number(&format!("as second term {}", msg))?,
             self.pop_number(&format!("as second term {}", msg))?,
         );
-        self.push_number(f(a, b));
-        Ok(())
+        self.push_number(f(a, b))
     }
 
     fn bin_op(&mut self, f: fn(Value, Value) -> bool) -> Result<(), InterpretError> {
         let (b, a) = (self.pop(), self.pop());
-        self.push(Value::Bool(f(a, b)));
-        Ok(())
+        self.push(Value::Bool(f(a, b)))
     }
 
     // error functions
@@ -632,15 +631,11 @@ impl Vm {
                     Err(e) => return Err(self.runtime_error(&e)),
                 };
                 self.stack.truncate(left - 1);
-                self.push(result);
-                Ok(())
+                self.push(result)
             }
             Value::Closure(fun) => self.call(fun, arg_count),
             Value::Class(cls) => {
-                let instance = Instance {
-                    class: cls,
-                    fields: Table::new(),
-                };
+                let instance = Instance::new(cls);
                 let instance = self.alloc(instance);
                 let index = self.stack.len() - arg_count - 1;
                 self.stack[index] = Value::Instance(instance);
@@ -703,10 +698,7 @@ impl Vm {
                 return upvalue;
             }
         }
-        let upvalue = Upvalue {
-            location: index,
-            closed: None,
-        };
+        let upvalue = Upvalue::new(index);
         let upvalue = self.alloc(upvalue);
         self.open_upvalues.push(upvalue);
         upvalue
@@ -726,14 +718,15 @@ impl Vm {
         }
     }
 
-    fn define_method(&mut self, name: GcRef<String>) {
+    fn define_method(&mut self, name: GcRef<String>) -> Result<(), InterpretError> {
         let method = self.peek(0);
         if let Value::Class(class) = self.peek(1) {
             let class = self.gc.deref_mut(class);
             class.methods.insert(name, method);
             self.pop();
+            Ok(())
         } else {
-            panic!("Cannot define a method on non class.");
+            Err(self.runtime_error("Cannot define a method on non class."))
         }
     }
 
@@ -747,16 +740,12 @@ impl Vm {
             let receiver = self.peek(0);
             let method = match method {
                 Value::Closure(cl) => cl,
-                _ => panic!("No method found"),
+                _ => return Err(self.runtime_error("No method found")),
             };
-            let bound = BoundMethod {
-                receiver,
-                method: *method,
-            };
+            let bound = BoundMethod::new(receiver, *method);
             let bound = self.alloc(bound);
             self.pop();
-            self.push(Value::BoundMethod(bound));
-            Ok(())
+            self.push(Value::BoundMethod(bound))
         } else {
             let name = &self.gc.deref(name);
             let message = format!("Undefined property '{}'.", name);
@@ -766,7 +755,33 @@ impl Vm {
 
     fn invoke(&mut self, name: GcRef<String>, arg_count: usize) -> Result<(), InterpretError> {
         let receiver = self.peek(arg_count);
-        if let Value::Instance(instance) = receiver {
+        let method_name = self.gc.deref(name).clone();
+        if method_name == "copy" {
+            if arg_count != 0 {
+                Err(self.runtime_error("Copy requires only one argument."))
+            } else {
+                let to_push = match receiver {
+                    Value::Array(value) => {
+                        let new = self.gc.deref(value).clone();
+                        let new = self.alloc(new);
+                        Value::Array(new)
+                    }
+                    Value::Instance(value) => {
+                        let new = self.gc.deref(value).clone();
+                        let new = self.alloc(new);
+                        Value::Instance(new)
+                    }
+                    _ => {
+                        return Err(self.runtime_error(&format!(
+                            "Function copy is not defined for {}",
+                            receiver.type_of()
+                        )))
+                    }
+                };
+                self.pop();
+                self.push(to_push)
+            }
+        } else if let Value::Instance(instance) = receiver {
             let instance = self.gc.deref(instance);
             if let Some(&value) = instance.fields.get(&name) {
                 let pos = self.stack.len() - 1 - arg_count;
@@ -777,7 +792,6 @@ impl Vm {
                 self.invoke_from_class(class, name, arg_count)
             }
         } else if let Value::Array(array) = receiver {
-            let method_name = self.gc.deref(name).clone();
             match &*method_name {
                 "push" => {
                     if arg_count == 0 {
@@ -790,8 +804,7 @@ impl Vm {
                         temp.reverse();
                         self.gc.deref_mut(array).append(&mut temp);
                         self.pop();
-                        self.push(Value::Nil);
-                        Ok(())
+                        self.push(Value::Nil)
                     }
                 }
                 "pop" => {
@@ -799,8 +812,7 @@ impl Vm {
                         Err(self.runtime_error("Pop requires no arguments."))
                     } else if let Some(value) = self.gc.deref_mut(array).pop() {
                         self.pop();
-                        self.push(value);
-                        Ok(())
+                        self.push(value)
                     } else {
                         Err(self.runtime_error("No element in array when popping from it."))
                     }
@@ -812,8 +824,7 @@ impl Vm {
                         let mut new_array = self.gc.deref(array_ref).clone();
                         self.gc.deref_mut(array).append(&mut new_array);
                         self.pop();
-                        self.push(Value::Nil);
-                        Ok(())
+                        self.push(Value::Nil)
                     } else {
                         Err(self.runtime_error("Extend needs an array as argument"))
                     }
@@ -823,19 +834,7 @@ impl Vm {
                         Err(self.runtime_error("Length requires only one argument."))
                     } else {
                         self.pop();
-                        self.push_number(self.gc.deref(array).len() as f64);
-                        Ok(())
-                    }
-                }
-                "copy" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("Copy requires only one argument."))
-                    } else {
-                        let new_array = self.gc.deref(array).clone();
-                        let new_array = self.alloc(new_array);
-                        self.pop();
-                        self.push(Value::Array(new_array));
-                        Ok(())
+                        self.push_number(self.gc.deref(array).len() as f64)
                     }
                 }
                 "reverse" => {
@@ -844,14 +843,22 @@ impl Vm {
                     } else {
                         self.gc.deref_mut(array).reverse();
                         self.pop();
-                        self.push(Value::Nil);
-                        Ok(())
+                        self.push(Value::Nil)
                     }
                 }
                 _ => {
                     Err(self
                         .runtime_error(&format!("Array doesn't have {} as method.", method_name)))
                 }
+            }
+        } else if method_name == "toString" {
+            if arg_count != 0 {
+                Err(self.runtime_error("toString requires no arguments"))
+            } else {
+                let string = format!("{}", GcTraceFormatter::new(receiver, &self.gc));
+                let string = self.alloc(string);
+                self.pop();
+                self.push(Value::VString(string))
             }
         } else {
             Err(self.runtime_error("Only instances have methods."))
@@ -869,7 +876,15 @@ impl Vm {
             if let Value::Closure(closure) = method {
                 self.call(closure, count)
             } else {
-                panic!("Got method that is not closure!")
+                Err(self.runtime_error("Got method that is not closure!"))
+            }
+        } else if self.gc.deref(name) == "toString" {
+            if count != 0 {
+                Err(self.runtime_error("toString requires no arguments"))
+            } else {
+                let name = class.name;
+                self.pop();
+                self.push(Value::VString(name))
             }
         } else {
             let name = &self.gc.deref(name);

@@ -1,4 +1,11 @@
-var a = [1, 2, 3, 4, 5];
-a.reverse();
-print a;
-print a.reverse();
+class Prova {
+    init() {
+        this.a = 1;
+    }
+
+    toString() {
+        return "PROVA";
+    }
+}
+
+print Prova().toString();

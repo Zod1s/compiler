@@ -150,7 +150,7 @@ impl Gc {
     pub fn deref<T: GcTrace + 'static>(&self, gcref: GcRef<T>) -> &T {
         self.objects[gcref.index]
             .as_ref()
-            .unwrap()
+            .unwrap_or_else(|| panic!("Reference {} already freed", gcref.index))
             .object
             .as_any()
             .downcast_ref()
@@ -160,7 +160,7 @@ impl Gc {
     pub fn deref_mut<T: GcTrace + 'static>(&mut self, gcref: GcRef<T>) -> &mut T {
         self.objects[gcref.index]
             .as_mut()
-            .unwrap()
+            .unwrap_or_else(|| panic!("Reference {} already freed", gcref.index))
             .object
             .as_any_mut()
             .downcast_mut()
