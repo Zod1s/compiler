@@ -8,10 +8,6 @@
 // )]
 #![deny(clippy::all)]
 
-/// TODO:
-/// -- rearrange code
-/// -- add arrays
-
 mod chunk;
 mod compiler;
 mod gc;
@@ -69,7 +65,6 @@ pub fn repl(mut vm: Vm) {
                     vm.unset_debug();
                 } else if line == ":quit" || line == ":q" {
                     println!("> quitting");
-                    drop(vm);
                     break;
                 } else {
                     let _ = vm.interpret(&line);
@@ -77,7 +72,6 @@ pub fn repl(mut vm: Vm) {
             }
             Err(err) => {
                 println!("{:?}", err);
-                drop(vm);
                 break;
             }
         }

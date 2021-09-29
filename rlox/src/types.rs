@@ -19,6 +19,32 @@ pub enum Value {
     VString(GcRef<String>),
 }
 
+impl Value {
+    pub fn is_false(&self) -> bool {
+        match self {
+            Value::Bool(b) => !b,
+            Value::Nil => true,
+            _ => false,
+        }
+    }
+
+    pub fn type_of(&self) -> &str {
+        match self {
+            Value::Array(_) => "array",
+            Value::Bool(_) => "bool",
+            Value::BoundMethod(_) => "bound method",
+            Value::Class(_) => "class",
+            Value::Closure(_) => "closure",
+            Value::Function(_) => "function",
+            Value::Instance(_) => "instance",
+            Value::NativeFn(_) => "native function",
+            Value::Nil => "nil",
+            Value::Number(_) => "number",
+            Value::VString(_) => "string",
+        }
+    }
+}
+
 impl GcTrace for Value {
     fn format(&self, f: &mut fmt::Formatter, gc: &Gc) -> fmt::Result {
         match self {
@@ -61,32 +87,6 @@ impl GcTrace for Value {
     #[inline]
     fn as_any_mut(&mut self) -> &mut dyn Any {
         panic!("Value should not be allocated")
-    }
-}
-
-impl Value {
-    pub fn is_false(&self) -> bool {
-        match self {
-            Value::Bool(b) => !b,
-            Value::Nil => true,
-            _ => false,
-        }
-    }
-
-    pub fn type_of(&self) -> &str {
-        match self {
-            Value::Array(_) => "array",
-            Value::Bool(_) => "bool",
-            Value::BoundMethod(_) => "bound method",
-            Value::Class(_) => "class",
-            Value::Closure(_) => "closure",
-            Value::Function(_) => "function",
-            Value::Instance(_) => "instance",
-            Value::NativeFn(_) => "native function",
-            Value::Nil => "nil",
-            Value::Number(_) => "number",
-            Value::VString(_) => "string",
-        }
     }
 }
 

@@ -61,12 +61,6 @@ pub struct Chunk {
     lines: Vec<(usize, usize)>, // repetition, line
 }
 
-impl Default for Chunk {
-    fn default() -> Self {
-        Chunk::new()
-    }
-}
-
 impl Chunk {
     pub fn new() -> Self {
         Chunk {
@@ -93,17 +87,8 @@ impl Chunk {
     }
 
     pub fn add_constant(&mut self, value: Value) -> usize {
-        if let Value::VString(_) = value {
-            if self.constants.contains(&value) {
-                self.constants.iter().position(|r| r == &value).unwrap()
-            } else {
-                self.constants.push(value);
-                self.constants.len() - 1
-            }
-        } else {
-            self.constants.push(value);
-            self.constants.len() - 1
-        }
+        self.constants.push(value);
+        self.constants.len() - 1
     }
 
     pub fn get_line(&self, index: usize) -> usize {

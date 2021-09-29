@@ -1,3 +1,5 @@
+// doesn't handle unicode characters
+
 pub struct Scanner<'s> {
     source: &'s str,
     start: usize,
@@ -20,83 +22,83 @@ impl<'s> Scanner<'s> {
         self.start = self.current;
 
         if self.at_end() {
-            self.make_token(TokenType::Eof)
+            self.make_token(Eof)
         } else {
             let c = self.advance();
 
             match c {
-                '(' => self.make_token(TokenType::LeftParen),
-                ')' => self.make_token(TokenType::RightParen),
-                '[' => self.make_token(TokenType::LeftBracket),
-                ']' => self.make_token(TokenType::RightBracket),
-                '{' => self.make_token(TokenType::LeftBrace),
-                '}' => self.make_token(TokenType::RightBrace),
-                ';' => self.make_token(TokenType::Semicolon),
-                ',' => self.make_token(TokenType::Comma),
-                '.' => self.make_token(TokenType::Dot),
+                '(' => self.make_token(LeftParen),
+                ')' => self.make_token(RightParen),
+                '[' => self.make_token(LeftBracket),
+                ']' => self.make_token(RightBracket),
+                '{' => self.make_token(LeftBrace),
+                '}' => self.make_token(RightBrace),
+                ';' => self.make_token(Semicolon),
+                ',' => self.make_token(Comma),
+                '.' => self.make_token(Dot),
                 '-' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::MinusEqual)
+                        self.make_token(MinusEqual)
                     } else if self.match_char('-') {
-                        self.make_token(TokenType::MinusMinus)
+                        self.make_token(MinusMinus)
                     } else {
-                        self.make_token(TokenType::Minus)
+                        self.make_token(Minus)
                     }
                 }
                 '+' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::PlusEqual)
+                        self.make_token(PlusEqual)
                     } else if self.match_char('+') {
-                        self.make_token(TokenType::PlusPlus)
+                        self.make_token(PlusPlus)
                     } else {
-                        self.make_token(TokenType::Plus)
+                        self.make_token(Plus)
                     }
                 }
                 '/' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::SlashEqual)
+                        self.make_token(SlashEqual)
                     } else {
-                        self.make_token(TokenType::Slash)
+                        self.make_token(Slash)
                     }
                 }
                 '*' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::StarEqual)
+                        self.make_token(StarEqual)
                     } else {
-                        self.make_token(TokenType::Star)
+                        self.make_token(Star)
                     }
                 }
                 '!' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::BangEqual)
+                        self.make_token(BangEqual)
                     } else {
-                        self.make_token(TokenType::Bang)
+                        self.make_token(Bang)
                     }
                 }
                 '=' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::EqualEqual)
+                        self.make_token(EqualEqual)
                     } else {
-                        self.make_token(TokenType::Equal)
+                        self.make_token(Equal)
                     }
                 }
                 '<' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::LessEqual)
+                        self.make_token(LessEqual)
                     } else if self.match_char('|') {
-                        self.make_token(TokenType::LessPipe)
+                        self.make_token(LessPipe)
                     } else {
-                        self.make_token(TokenType::Less)
+                        self.make_token(Less)
                     }
                 }
                 '>' => {
                     if self.match_char('=') {
-                        self.make_token(TokenType::GreaterEqual)
+                        self.make_token(GreaterEqual)
                     } else {
-                        self.make_token(TokenType::Greater)
+                        self.make_token(Greater)
                     }
                 }
-                '%' => self.make_token(TokenType::Rem),
+                '%' => self.make_token(Rem),
                 '"' => self.string(),
                 '0'..='9' => self.number(),
                 'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
@@ -118,7 +120,7 @@ impl<'s> Scanner<'s> {
 
     #[inline]
     fn error_token(&self, message: &'s str) -> Token<'s> {
-        Token::new(TokenType::Error, message, self.line)
+        Token::new(Error, message, self.line)
     }
 
     fn advance(&mut self) -> char {
@@ -184,7 +186,7 @@ impl<'s> Scanner<'s> {
             self.error_token("Unterminated string.")
         } else {
             self.advance();
-            self.make_token(TokenType::RString)
+            self.make_token(RString)
         }
     }
 
@@ -201,7 +203,7 @@ impl<'s> Scanner<'s> {
             }
         }
 
-        self.make_token(TokenType::Number)
+        self.make_token(Number)
     }
 
     fn identifier(&mut self) -> Token<'s> {
@@ -224,9 +226,9 @@ impl<'s> Scanner<'s> {
             .nth(self.start)
             .expect("Error advancing on character")
         {
-            'a' => self.check_keyword(1, 2, "nd", TokenType::And),
-            'c' => self.check_keyword(1, 4, "lass", TokenType::Class),
-            'e' => self.check_keyword(1, 3, "lse", TokenType::Else),
+            'a' => self.check_keyword(1, 2, "nd", And),
+            'c' => self.check_keyword(1, 4, "lass", Class),
+            'e' => self.check_keyword(1, 3, "lse", Else),
             'f' => {
                 if self.current - self.start > 1 {
                     match self
@@ -235,21 +237,21 @@ impl<'s> Scanner<'s> {
                         .nth(self.start + 1)
                         .expect("Error advancing on character")
                     {
-                        'a' => self.check_keyword(2, 3, "lse", TokenType::False),
-                        'o' => self.check_keyword(2, 1, "r", TokenType::For),
-                        'u' => self.check_keyword(2, 1, "n", TokenType::Fun),
-                        _ => TokenType::Identifier,
+                        'a' => self.check_keyword(2, 3, "lse", False),
+                        'o' => self.check_keyword(2, 1, "r", For),
+                        'u' => self.check_keyword(2, 1, "n", Fun),
+                        _ => Identifier,
                     }
                 } else {
-                    TokenType::Identifier
+                    Identifier
                 }
             }
-            'i' => self.check_keyword(1, 1, "f", TokenType::If),
-            'n' => self.check_keyword(1, 2, "il", TokenType::Nil),
-            'o' => self.check_keyword(1, 1, "r", TokenType::Or),
-            'p' => self.check_keyword(1, 4, "rint", TokenType::Print),
-            'r' => self.check_keyword(1, 5, "eturn", TokenType::Return),
-            's' => self.check_keyword(1, 4, "uper", TokenType::Super),
+            'i' => self.check_keyword(1, 1, "f", If),
+            'n' => self.check_keyword(1, 2, "il", Nil),
+            'o' => self.check_keyword(1, 1, "r", Or),
+            'p' => self.check_keyword(1, 4, "rint", Print),
+            'r' => self.check_keyword(1, 5, "eturn", Return),
+            's' => self.check_keyword(1, 4, "uper", Super),
             't' => {
                 if self.current - self.start > 1 {
                     match self
@@ -258,17 +260,17 @@ impl<'s> Scanner<'s> {
                         .nth(self.start + 1)
                         .expect("Error advancing on character")
                     {
-                        'h' => self.check_keyword(2, 2, "is", TokenType::This),
-                        'r' => self.check_keyword(2, 2, "ue", TokenType::True),
-                        _ => TokenType::Identifier,
+                        'h' => self.check_keyword(2, 2, "is", This),
+                        'r' => self.check_keyword(2, 2, "ue", True),
+                        _ => Identifier,
                     }
                 } else {
-                    TokenType::Identifier
+                    Identifier
                 }
             }
-            'v' => self.check_keyword(1, 2, "ar", TokenType::Var),
-            'w' => self.check_keyword(1, 4, "hile", TokenType::While),
-            _ => TokenType::Identifier,
+            'v' => self.check_keyword(1, 2, "ar", Var),
+            'w' => self.check_keyword(1, 4, "hile", While),
+            _ => Identifier,
         }
     }
 
@@ -284,7 +286,7 @@ impl<'s> Scanner<'s> {
         {
             ttype
         } else {
-            TokenType::Identifier
+            Identifier
         }
     }
 }
@@ -307,12 +309,14 @@ impl<'a> Token<'a> {
 
     pub fn syntethic(lexeme: &'a str) -> Self {
         Self {
-            token_type: TokenType::Error,
+            token_type: Error,
             lexeme,
             line: 0,
         }
     }
 }
+
+use self::TokenType::*;
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, Copy)]
 pub enum TokenType {
@@ -323,20 +327,14 @@ pub enum TokenType {
     LeftBracket,
     LeftParen,
     Minus,
-    MinusEqual,
-    MinusMinus,
     Rem,
     Plus,
-    PlusEqual,
-    PlusPlus,
     RightBrace,
     RightBracket,
     RightParen,
     Semicolon,
     Slash,
-    SlashEqual,
     Star,
-    StarEqual,
     // One or two character tokens.
     Bang,
     BangEqual,
@@ -347,6 +345,12 @@ pub enum TokenType {
     Less,
     LessEqual,
     LessPipe,
+    MinusEqual,
+    MinusMinus,
+    PlusEqual,
+    PlusPlus,
+    SlashEqual,
+    StarEqual,
     // Literals.
     Identifier,
     Number,
@@ -368,7 +372,7 @@ pub enum TokenType {
     True,
     Var,
     While,
-
+    // Signal tokens
     Eof,
     Error,
 }
