@@ -43,6 +43,10 @@ impl Value {
             Value::VString(_) => "string",
         }
     }
+
+    // pub fn is_number(&self) -> bool {
+    //     matches!(self, Value::Number(_))
+    // }
 }
 
 impl GcTrace for Value {

@@ -1,23 +1,10 @@
-=============== BEGIN script ===============
-0000     1  OP_CONSTANT         1 1
-0001     |  OP_CONSTANT         2 2
-0002     |  OP_CONSTANT         3 3
-0003     |  OP_CONSTANT         4 4
-0004     |  OP_CONSTANT         5 5
-0005     |  OP_BUILD_LIST       5 5
-0006     |  OP_DEFINE_GLOBAL    0 "a"
-0007     2  OP_GET_GLOBAL       0 "a"
-0008     |  OP_INVOKE           7 ("copy") 0
-0009     |  OP_DEFINE_GLOBAL    6 "b"
-0010     3  OP_GET_GLOBAL       6 "b"
-0011     |  OP_CONSTANT         8 0
-0012     |  OP_CONSTANT         9 3
-0013     |  OP_SET_INDEX_ARRAY
-0014     |  OP_POP
-0015     4  OP_GET_GLOBAL       0 "a"
-0016     |  OP_PRINT
-0017     5  OP_GET_GLOBAL       6 "b"
-0018     |  OP_PRINT
-0019     6  OP_RETURN_NIL
-===============  END script  ===============
+========== BEGIN script ===========
+0000     2  OP_CONSTANT         0 1
+0001     3  OP_INCREMENT_LOCAL    1
+0002     |  OP_POP
+0003     4  OP_GET_LOCAL        1
+0004     |  OP_PRINT
+0005     5  OP_POP
+0006     |  OP_RETURN_NIL
+==========  END script  ===========
 

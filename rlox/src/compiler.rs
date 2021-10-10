@@ -520,50 +520,60 @@ impl<'s> Parser<'s> {
     }
 
     fn named_variable(&mut self, token: Token, can_assign: bool) {
-        let (get_op, set_op);
+        let (get_op, set_op, incr_op, decr_op);
         if let Some(arg) = self.resolve_local(token) {
             set_op = OpCode::SetLocal(arg);
             get_op = OpCode::GetLocal(arg);
+            incr_op = OpCode::IncrementLocal(arg);
+            decr_op = OpCode::DecrementLocal(arg);
         } else if let Some(arg) = self.resolve_upvalue(token) {
             set_op = OpCode::SetUpvalue(arg);
             get_op = OpCode::GetUpvalue(arg);
+            incr_op = OpCode::IncrementUpvalue(arg);
+            decr_op = OpCode::DecrementUpvalue(arg);
         } else {
             let arg = self.identifier_constant(token);
             set_op = OpCode::SetGlobal(arg);
             get_op = OpCode::GetGlobal(arg);
+            incr_op = OpCode::IncrementGlobal(arg);
+            decr_op = OpCode::DecrementGlobal(arg);
         }
 
-        if can_assign && self.match_token(TokenType::Equal) {
-            self.expression();
-            self.emit_opcode(set_op);
-        } else if can_assign && self.match_token(TokenType::PlusEqual) {
-            self.emit_opcode(get_op);
-            self.expression();
-            self.emit_opcode(OpCode::Add);
-            self.emit_opcode(set_op);
-        } else if can_assign && self.match_token(TokenType::MinusEqual) {
-            self.emit_opcode(get_op);
-            self.expression();
-            self.emit_opcode(OpCode::Sub);
-            self.emit_opcode(set_op);
-        } else if can_assign && self.match_token(TokenType::SlashEqual) {
-            self.emit_opcode(get_op);
-            self.expression();
-            self.emit_opcode(OpCode::Div);
-            self.emit_opcode(set_op);
-        } else if can_assign && self.match_token(TokenType::StarEqual) {
-            self.emit_opcode(get_op);
-            self.expression();
-            self.emit_opcode(OpCode::Mul);
-            self.emit_opcode(set_op);
-        } else if can_assign && self.match_token(TokenType::PlusPlus) {
-            self.emit_opcode(get_op);
-            self.emit_opcode(OpCode::Increment);
-            self.emit_opcode(set_op);
-        } else if can_assign && self.match_token(TokenType::MinusMinus) {
-            self.emit_opcode(get_op);
-            self.emit_opcode(OpCode::Decrement);
-            self.emit_opcode(set_op);
+        if can_assign {
+            if self.match_token(TokenType::Equal) {
+                self.expression();
+                self.emit_opcode(set_op);
+            } else if self.match_token(TokenType::PlusEqual) {
+                self.emit_contrapt(OpCode::Add, get_op, set_op);
+            // self.emit_opcode(get_op);
+            // self.expression();
+            // self.emit_opcode(OpCode::Add);
+            // self.emit_opcode(set_op);
+            } else if self.match_token(TokenType::MinusEqual) {
+                self.emit_contrapt(OpCode::Sub, get_op, set_op);
+            // self.emit_opcode(get_op);
+            // self.expression();
+            // self.emit_opcode(OpCode::Sub);
+            // self.emit_opcode(set_op);
+            } else if self.match_token(TokenType::SlashEqual) {
+                self.emit_contrapt(OpCode::Div, get_op, set_op);
+            // self.emit_opcode(get_op);
+            // self.expression();
+            // self.emit_opcode(OpCode::Div);
+            // self.emit_opcode(set_op);
+            } else if self.match_token(TokenType::StarEqual) {
+                self.emit_contrapt(OpCode::Mul, get_op, set_op);
+            // self.emit_opcode(get_op);
+            // self.expression();
+            // self.emit_opcode(OpCode::Mul);
+            // self.emit_opcode(set_op);
+            } else if self.match_token(TokenType::PlusPlus) {
+                self.emit_opcode(incr_op);
+            } else if self.match_token(TokenType::MinusMinus) {
+                self.emit_opcode(decr_op);
+            } else {
+                self.emit_opcode(get_op);
+            }
         } else {
             self.emit_opcode(get_op);
         }
@@ -978,6 +988,13 @@ impl<'s> Parser<'s> {
     #[inline]
     fn emit_pop(&mut self) {
         self.emit_opcode(OpCode::Pop);
+    }
+
+    fn emit_contrapt(&mut self, opcode: OpCode, get_op: OpCode, set_op: OpCode) {
+        self.emit_opcode(get_op);
+        self.expression();
+        self.emit_opcode(opcode);
+        self.emit_opcode(set_op);
     }
 
     // error handling

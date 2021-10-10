@@ -1,11 +1,11 @@
-class Prova {
-    init() {
-        this.a = 1;
+fun p() {
+    var a =1;
+    fun b() {
+        a--;
+        print a;
     }
-
-    toString() {
-        return "PROVA";
-    }
+    return b;
 }
 
-print Prova().toString();
+var d = p();
+d();

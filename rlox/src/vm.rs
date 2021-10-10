@@ -128,12 +128,7 @@ impl Vm {
     }
 
     fn push_number(&mut self, n: f64) -> Result<(), InterpretError> {
-        if self.stack.capacity() == isize::MAX as usize {
-            Err(self.runtime_error("Stack full"))
-        } else {
-            self.stack.push(Value::Number(n));
-            Ok(())
-        }
+        self.push(Value::Number(n))
     }
 
     #[inline]
@@ -235,9 +230,71 @@ impl Vm {
                     _ => return Err(self.runtime_error("Error: no function found.")),
                 },
                 OpCode::Constant(index) => self.push(self.current_chunk().get_constant(index))?,
-                OpCode::Decrement => {
-                    let n = self.pop_number("to decrement")? - 1.0;
-                    self.push_number(n)?
+                OpCode::DecrementGlobal(index) => {
+                    if let Value::VString(string_ref) = self.current_chunk().get_constant(index) {
+                        match self.globals.get(&string_ref) {
+                            Some(&value) => {
+                                if let Value::Number(v) = value {
+                                    let val = Value::Number(v - 1.0);
+                                    self.push(val)?;
+                                    if self.globals.insert(string_ref, val).is_none() {
+                                        self.globals.remove(&string_ref);
+                                        return Err(self.runtime_error(&format!(
+                                            "Undefined variable '{}'.",
+                                            self.gc.deref(string_ref)
+                                        )));
+                                    }
+                                } else {
+                                    return Err(self.runtime_error(
+                                        "Only numeric variables can be incremented.",
+                                    ));
+                                }
+                            }
+                            None => {
+                                return Err(self.runtime_error(&format!(
+                                    "Undefined variable '{}'.",
+                                    self.gc.deref(string_ref)
+                                )))
+                            }
+                        }
+                    } else {
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
+                    }
+                }
+                OpCode::DecrementLocal(slot) => {
+                    let index = slot + self.current_frame().slot;
+                    if let Value::Number(value) = self.stack[index] {
+                        let value = Value::Number(value - 1.0);
+                        self.stack[index] = value;
+                        self.push(value)?;
+                    } else {
+                        return Err(self.runtime_error("Only number can be incremented."));
+                    }
+                }
+                OpCode::DecrementUpvalue(slot) => {
+                    let upvalue = self.current_closure().upvalues[slot];
+                    let value = {
+                        let upvalue = self.gc.deref(upvalue);
+                        let temp = if let Some(value) = upvalue.closed {
+                            value
+                        } else {
+                            self.stack[upvalue.location]
+                        };
+
+                        if let Value::Number(val) = temp {
+                            Value::Number(val - 1.0)
+                        } else {
+                            return Err(self.runtime_error("Only numbers can be incremented."));
+                        }
+                    };
+                    let mut upvalue = self.gc.deref_mut(upvalue);
+                    if upvalue.closed.is_none() {
+                        self.stack[upvalue.location] = value;
+                    } else {
+                        upvalue.closed = Some(value);
+                    }
+                    self.push(value)?;
                 }
                 OpCode::DefineGlobal(index) => {
                     if let Value::VString(string_ref) = self.current_chunk().constants[index] {
@@ -363,9 +420,71 @@ impl Vm {
                         )
                     }
                 },
-                OpCode::Increment => {
-                    let n = self.pop_number("to increment")? + 1.0;
-                    self.push_number(n)?
+                OpCode::IncrementGlobal(index) => {
+                    if let Value::VString(string_ref) = self.current_chunk().get_constant(index) {
+                        match self.globals.get(&string_ref) {
+                            Some(&value) => {
+                                if let Value::Number(v) = value {
+                                    let val = Value::Number(v + 1.0);
+                                    self.push(val)?;
+                                    if self.globals.insert(string_ref, val).is_none() {
+                                        self.globals.remove(&string_ref);
+                                        return Err(self.runtime_error(&format!(
+                                            "Undefined variable '{}'.",
+                                            self.gc.deref(string_ref)
+                                        )));
+                                    }
+                                } else {
+                                    return Err(self.runtime_error(
+                                        "Only numeric variables can be incremented.",
+                                    ));
+                                }
+                            }
+                            None => {
+                                return Err(self.runtime_error(&format!(
+                                    "Undefined variable '{}'.",
+                                    self.gc.deref(string_ref)
+                                )))
+                            }
+                        }
+                    } else {
+                        return Err(self
+                            .runtime_error("Error: Invalid identifier found for usage on stack."));
+                    }
+                }
+                OpCode::IncrementLocal(slot) => {
+                    let index = slot + self.current_frame().slot;
+                    if let Value::Number(value) = self.stack[index] {
+                        let value = Value::Number(value + 1.0);
+                        self.stack[index] = value;
+                        self.push(value)?;
+                    } else {
+                        return Err(self.runtime_error("Only number can be incremented."));
+                    }
+                }
+                OpCode::IncrementUpvalue(slot) => {
+                    let upvalue = self.current_closure().upvalues[slot];
+                    let value = {
+                        let upvalue = self.gc.deref(upvalue);
+                        let temp = if let Some(value) = upvalue.closed {
+                            value
+                        } else {
+                            self.stack[upvalue.location]
+                        };
+
+                        if let Value::Number(val) = temp {
+                            Value::Number(val + 1.0)
+                        } else {
+                            return Err(self.runtime_error("Only numbers can be incremented."));
+                        }
+                    };
+                    let mut upvalue = self.gc.deref_mut(upvalue);
+                    if upvalue.closed.is_none() {
+                        self.stack[upvalue.location] = value;
+                    } else {
+                        upvalue.closed = Some(value);
+                    }
+                    self.push(value)?;
                 }
                 OpCode::Inherit => {
                     let pair = (self.peek(0), self.peek(1));
@@ -844,6 +963,22 @@ impl Vm {
                         self.gc.deref_mut(array).reverse();
                         self.pop();
                         self.push(Value::Nil)
+                    }
+                }
+                "sort" => {
+                    let array = self.gc.deref_mut(array);
+                    if array.iter().all(|&x| matches!(x, Value::Number(_))) {
+                        array.sort_by(|a, b| {
+                            if let (Value::Number(a), Value::Number(b)) = (a, b) {
+                                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Less)
+                            } else {
+                                panic!();
+                            }
+                        });
+                        self.pop();
+                        self.push(Value::Nil)
+                    } else {
+                        Err(self.runtime_error("Cannot sort an array with not-number elements"))
                     }
                 }
                 _ => {

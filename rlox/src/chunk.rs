@@ -12,7 +12,10 @@ pub enum OpCode {
     CloseUpvalue,
     Closure(usize),
     Constant(usize),
-    Decrement,
+    // Decrement,
+    DecrementGlobal(usize),
+    DecrementLocal(usize),
+    DecrementUpvalue(usize),
     DefineGlobal(usize),
     Div,
     Equal,
@@ -25,7 +28,10 @@ pub enum OpCode {
     GetUpvalue(usize),
     Greater,
     GreaterEqual,
-    Increment,
+    // Increment,
+    IncrementGlobal(usize),
+    IncrementLocal(usize),
+    IncrementUpvalue(usize),
     Inherit,
     Invoke((usize, usize)),
     Jump(usize),
@@ -183,9 +189,28 @@ impl<'s> Disassembler<'s> {
                 self.invoke_instruction_to_string("OP_SUPER_INVOKE", *name, *args)
             }
             OpCode::GetSuper(value) => self.const_instruction_to_string("OP_GET_SUPER", *value),
+            OpCode::IncrementGlobal(value) => {
+                self.value_instruction_to_string("OP_INCREMENT_GLOBAL", *value)
+            }
+            OpCode::IncrementLocal(value) => {
+                self.value_instruction_to_string("OP_INCREMENT_LOCAL", *value)
+            }
+            OpCode::IncrementUpvalue(value) => {
+                self.value_instruction_to_string("OP_INCREMENT_UPVALUE", *value)
+            }
+            OpCode::DecrementGlobal(value) => {
+                self.value_instruction_to_string("OP_DECREMENT_GLOBAL", *value)
+            }
+            OpCode::DecrementLocal(value) => {
+                self.value_instruction_to_string("OP_DECREMENT_LOCAL", *value)
+            }
+            OpCode::DecrementUpvalue(value) => {
+                self.value_instruction_to_string("OP_DECREMENT_UPVALUE", *value)
+            }
+
             OpCode::Return => String::from("OP_RETURN"),
-            OpCode::Increment => String::from("OP_INCREMENT"),
-            OpCode::Decrement => String::from("OP_DECREMENT"),
+            // OpCode::Increment => String::from("OP_INCREMENT"),
+            // OpCode::Decrement => String::from("OP_DECREMENT"),
             OpCode::ReturnNil => String::from("OP_RETURN_NIL"),
             OpCode::Negate => String::from("OP_NEGATE"),
             OpCode::Add => String::from("OP_ADD"),
