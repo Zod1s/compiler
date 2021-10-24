@@ -545,28 +545,12 @@ impl<'s> Parser<'s> {
                 self.emit_opcode(set_op);
             } else if self.match_token(TokenType::PlusEqual) {
                 self.emit_contrapt(OpCode::Add, get_op, set_op);
-            // self.emit_opcode(get_op);
-            // self.expression();
-            // self.emit_opcode(OpCode::Add);
-            // self.emit_opcode(set_op);
             } else if self.match_token(TokenType::MinusEqual) {
                 self.emit_contrapt(OpCode::Sub, get_op, set_op);
-            // self.emit_opcode(get_op);
-            // self.expression();
-            // self.emit_opcode(OpCode::Sub);
-            // self.emit_opcode(set_op);
             } else if self.match_token(TokenType::SlashEqual) {
                 self.emit_contrapt(OpCode::Div, get_op, set_op);
-            // self.emit_opcode(get_op);
-            // self.expression();
-            // self.emit_opcode(OpCode::Div);
-            // self.emit_opcode(set_op);
             } else if self.match_token(TokenType::StarEqual) {
                 self.emit_contrapt(OpCode::Mul, get_op, set_op);
-            // self.emit_opcode(get_op);
-            // self.expression();
-            // self.emit_opcode(OpCode::Mul);
-            // self.emit_opcode(set_op);
             } else if self.match_token(TokenType::PlusPlus) {
                 self.emit_opcode(incr_op);
             } else if self.match_token(TokenType::MinusMinus) {

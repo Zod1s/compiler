@@ -40,7 +40,7 @@ impl<T: GcTrace> fmt::Debug for GcRef<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let full_name = type_name::<T>();
         full_name.split("::").last().unwrap();
-        write!(f, "ref({}:{})", self.index, full_name)
+        write!(f, "ref({}: {})", self.index, full_name)
     }
 }
 
@@ -65,11 +65,11 @@ pub struct Gc {
     free_slots: Vec<usize>,
 }
 
-impl Default for Gc {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// impl Default for Gc {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
 
 impl Gc {
     const NEXT_GC: usize = 1024 * 1024;
