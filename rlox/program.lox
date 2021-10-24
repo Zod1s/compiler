@@ -1,7 +1,7 @@
 fun p() {
-    var a =1;
+    var a = 1;
     fun b() {
-        a--;
+        a++;
         print a;
     }
     return b;
