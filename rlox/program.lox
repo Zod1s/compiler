@@ -1,3 +1,5 @@
+#include program2.lox
+
 fun p() {
     var a = 1;
     fun b() {
@@ -9,3 +11,5 @@ fun p() {
 
 var d = p();
 d();
+s();
+ab();
