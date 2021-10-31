@@ -12,6 +12,7 @@ mod chunk;
 mod compiler;
 mod gc;
 mod object;
+mod preprocessor;
 mod scanner;
 mod types;
 mod vm;

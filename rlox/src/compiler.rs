@@ -566,13 +566,12 @@ impl<'s> Parser<'s> {
     fn method(&mut self) {
         self.consume(TokenType::Identifier, "Expect method name.");
         let constant = self.identifier_constant(self.previous);
-        let ftype = if self.previous.lexeme == "init" {
+
+        self.function(if self.previous.lexeme == "init" {
             FunctionType::Initializer
         } else {
             FunctionType::Method
-        };
-
-        self.function(ftype);
+        });
         self.emit_opcode(OpCode::Method(constant));
     }
 
