@@ -32,8 +32,7 @@ fn include_resolver(code: &mut String) {
         if line.starts_with(INCLUDE_HEADER) {
             let matches = INCLUDE_PATH.captures(&line);
             if let Some(mat) = matches {
-                let filename = &mat[1];
-                let mut import_file = fs::read_to_string(filename).expect("File not found");
+                let mut import_file = fs::read_to_string(&mat[1]).expect("File not found");
                 include_resolver(&mut import_file);
                 *line = import_file;
             } else {
