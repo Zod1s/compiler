@@ -15,6 +15,7 @@ pub fn preprocessor(code: &mut String) {
 // - the whole line should be substituted by the content of {program_name}.lox after having preprocessed it
 // KNOWN ISSUES:
 // - can import multiple times the same file if different imports use it
+// - infinite import loop
 
 use lazy_static::lazy_static;
 use regex::Regex;
