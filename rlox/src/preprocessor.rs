@@ -1,21 +1,27 @@
 // Preprocessor for rlox
 
 pub fn preprocessor(code: &mut String) {
-    include_resolver(code);
+    let mut imported = Vec::new();
+    include_resolver(code, &mut imported);
     // println!("{}", code);
 }
 
 // #include statements
 // - it handles #include statements for importing other rlox programs into the current file
-// - should scan the beginning of the program looking for #include
+
+// - it scans the beginning of the program looking for #include
 //  |statements and recursively adding the content of the included program
-// - #include statements must go at the beginning of the program, no #include are allowed after the first non-#include line
+
+// - #include statements must go at the beginning of the program, no #include are allowed
+//  |after the first non-#include line
+
 // - syntax: #include {program_name}
+// - program_name must include file extension
+
 // - program_name can possibly contain a local path to another file (not yet implemented)
-// - the whole line should be substituted by the content of {program_name}.lox after having preprocessed it
-// KNOWN ISSUES:
-// - can import multiple times the same file if different imports use it
-// - infinite import loop
+
+// - the whole line is substituted by the content of {program_name} after having
+//  |preprocessed it
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -26,15 +32,21 @@ lazy_static! {
     static ref INCLUDE_PATH: Regex = Regex::new(r"#include ([a-zA-Z_]\w*.lox)").unwrap();
 }
 
-fn include_resolver(code: &mut String) {
+fn include_resolver(code: &mut String, imported: &mut Vec<String>) {
     let mut temp = code.split('\n').map(String::from).collect::<Vec<String>>();
     for line in temp.iter_mut() {
         if line.starts_with(INCLUDE_HEADER) {
             let matches = INCLUDE_PATH.captures(&line);
             if let Some(mat) = matches {
-                let mut import_file = fs::read_to_string(&mat[1]).expect("File not found");
-                include_resolver(&mut import_file);
-                *line = import_file;
+                let file = mat[1].to_string();
+                if !imported.contains(&file) {
+                    imported.push(file.clone());
+                    let mut import_file = fs::read_to_string(file).expect("File not found");
+                    include_resolver(&mut import_file, imported);
+                    *line = import_file;
+                } else {
+                    *line = String::new();
+                }
             } else {
                 panic!("INCLUDE Error: expected filename, found {}", line);
             }
