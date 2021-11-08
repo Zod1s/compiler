@@ -19,7 +19,7 @@ mod vm;
 
 use preprocessor::preprocessor;
 use rustyline::Editor;
-use std::{env::args, fs::read_to_string, process::exit};
+use std::{env::args, process::exit};
 use types::InterpretError;
 use vm::Vm;
 
@@ -37,8 +37,7 @@ fn main() {
 }
 
 pub fn run_file(filename: &str, mut vm: Vm) {
-    let mut program = read_to_string(filename).expect("File not found");
-    preprocessor(&mut program);
+    let program = preprocessor(filename).expect("File not found");
     match vm.interpret(&program) {
         Err(InterpretError::Runtime) => {
             drop(vm);
@@ -70,8 +69,7 @@ pub fn repl(mut vm: Vm) {
                     println!("> quitting");
                     break;
                 } else if line.starts_with(":load") {
-                    let mut file = if let Ok(f) = read_to_string(line.trim_start_matches(":load "))
-                    {
+                    let file = if let Ok(f) = preprocessor(line.trim_start_matches(":load ")) {
                         f
                     } else {
                         eprintln!(
@@ -80,7 +78,6 @@ pub fn repl(mut vm: Vm) {
                         );
                         continue;
                     };
-                    preprocessor(&mut file);
                     let _ = vm.interpret(&file);
                 } else {
                     let _ = vm.interpret(&line);
@@ -96,8 +93,7 @@ pub fn repl(mut vm: Vm) {
 }
 
 pub fn dump(filename: &str, mut vm: Vm, to_dump: &str) {
-    let mut program = read_to_string(filename).expect("File not found");
-    preprocessor(&mut program);
+    let program = preprocessor(filename).expect("File not found");
     match vm.dump(&program, to_dump) {
         Err(InterpretError::Runtime) => {
             println!("Error while running.");

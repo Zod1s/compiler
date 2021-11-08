@@ -1,3 +1,5 @@
+#include program.lox
+
 fun ab() {
     print "ricorsivo anche";
 }

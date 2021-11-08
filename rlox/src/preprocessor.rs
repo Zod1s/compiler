@@ -1,31 +1,32 @@
 // Preprocessor for rlox
 
-pub fn preprocessor(code: &mut String) {
-    let mut imported = Vec::new();
-    include_resolver(code, &mut imported);
+use std::{fs, io::Result};
+
+pub fn preprocessor(filename: &str) -> Result<String> {
+    let mut program = fs::read_to_string(filename)?;
+    let mut imported = vec![filename.to_string()];
+    include_resolver(&mut program, &mut imported);
     // println!("{}", code);
+    Ok(program)
 }
 
-// #include statements
-// - it handles #include statements for importing other rlox programs into the current file
+/*
+#include statements
 
-// - it scans the beginning of the program looking for #include
-//  |statements and recursively adding the content of the included program
-
-// - #include statements must go at the beginning of the program, no #include are allowed
-//  |after the first non-#include line
-
-// - syntax: #include {program_name}
-// - program_name must include file extension
-
-// - program_name can possibly contain a local path to another file (not yet implemented)
-
-// - the whole line is substituted by the content of {program_name} after having
-//  |preprocessed it
+- it handles #include statements for importing other rlox programs into the current file
+- it scans the beginning of the program looking for #include
+| statements and recursively adding the content of the included program
+- #include statements must go at the beginning of the program, no #include are allowed
+| after the first non-#include line
+- syntax: #include {program_name}
+- program_name must include file extension
+- program_name can possibly contain a local path to another file (not yet implemented)
+- the whole line is substituted by the content of {program_name} after having
+| preprocessed it
+*/
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::fs;
 
 const INCLUDE_HEADER: &str = "#include";
 lazy_static! {
