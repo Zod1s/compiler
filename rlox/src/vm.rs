@@ -59,6 +59,9 @@ impl Vm {
         vm.define_native("isNumber", NativeFn(is_number));
         vm.define_native("isString", NativeFn(is_string));
         vm.define_native("instanceof", NativeFn(instance_of));
+        // vm.define_native("length", NativeFn(length));
+        vm.define_native("float", NativeFn(float));
+
         vm
     }
 
@@ -900,6 +903,21 @@ impl Vm {
                 self.pop();
                 self.push(to_push)
             }
+        } else if let Value::VString(string) = receiver {
+            match &*method_name {
+                "length" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("Length requires no arguments."))
+                    } else {
+                        self.pop();
+                        self.push_number(self.gc.deref(string).len() as f64)
+                    }
+                }
+                _ => {
+                    Err(self
+                        .runtime_error(&format!("Strign doesn't have {} as method.", method_name)))
+                }
+            }
         } else if let Value::Instance(instance) = receiver {
             let instance = self.gc.deref(instance);
             if let Some(&value) = instance.fields.get(&name) {
@@ -912,28 +930,24 @@ impl Vm {
             }
         } else if let Value::Array(array) = receiver {
             match &*method_name {
-                "push" => {
-                    if arg_count == 0 {
-                        Err(self.runtime_error("No arguments given to function push."))
+                "all" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("All requires no arguments."))
                     } else {
-                        let mut temp = Vec::new();
-                        for _ in 0..arg_count {
-                            temp.push(self.pop());
-                        }
-                        temp.reverse();
-                        self.gc.deref_mut(array).append(&mut temp);
                         self.pop();
-                        self.push(Value::Nil)
+                        self.push(Value::Bool(
+                            !self.gc.deref(array).iter().any(|&x| x.is_false()),
+                        ))
                     }
                 }
-                "pop" => {
+                "any" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("Pop requires no arguments."))
-                    } else if let Some(value) = self.gc.deref_mut(array).pop() {
-                        self.pop();
-                        self.push(value)
+                        Err(self.runtime_error("Any requires no arguments."))
                     } else {
-                        Err(self.runtime_error("No element in array when popping from it."))
+                        self.pop();
+                        self.push(Value::Bool(
+                            self.gc.deref(array).iter().any(|&x| !x.is_false()),
+                        ))
                     }
                 }
                 "extend" => {
@@ -950,10 +964,34 @@ impl Vm {
                 }
                 "length" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("Length requires only one argument."))
+                        Err(self.runtime_error("Length requires no arguments."))
                     } else {
                         self.pop();
                         self.push_number(self.gc.deref(array).len() as f64)
+                    }
+                }
+                "pop" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("Pop requires no arguments."))
+                    } else if let Some(value) = self.gc.deref_mut(array).pop() {
+                        self.pop();
+                        self.push(value)
+                    } else {
+                        Err(self.runtime_error("No element in array when popping from it."))
+                    }
+                }
+                "push" => {
+                    if arg_count == 0 {
+                        Err(self.runtime_error("No arguments given to function push."))
+                    } else {
+                        let mut temp = Vec::new();
+                        for _ in 0..arg_count {
+                            temp.push(self.pop());
+                        }
+                        temp.reverse();
+                        self.gc.deref_mut(array).append(&mut temp);
+                        self.pop();
+                        self.push(Value::Nil)
                     }
                 }
                 "reverse" => {
@@ -1089,62 +1127,6 @@ impl CallFrame {
 
 // native functions
 
-fn clock(vm: &Vm, _args: &[Value]) -> Result<Value, String> {
-    let time = vm.start_time.elapsed().as_secs_f64();
-    Ok(Value::Number(time))
-}
-
-fn lox_panic(vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    let mut terms: Vec<String> = vec![];
-
-    for &arg in args.iter() {
-        let formatter = GcTraceFormatter::new(arg, &vm.gc);
-        let term = format!("{}", formatter);
-        terms.push(term);
-    }
-
-    panic!("panic: {}", terms.join(", "))
-}
-
-fn sqrt(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n.sqrt()))
-            } else {
-                Err("sqrt needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("sqrt expects only one argument".to_owned()),
-    }
-}
-
-fn pow(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        2 => {
-            if let (Value::Number(n1), Value::Number(n2)) = (args[0], args[1]) {
-                Ok(Value::Number(n1.powf(n2)))
-            } else {
-                Err("sqrt needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("sqrt expects only one argument".to_owned()),
-    }
-}
-
-fn square(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n * n))
-            } else {
-                Err("square needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("square expects only one argument".to_owned()),
-    }
-}
-
 fn abs(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => {
@@ -1155,53 +1137,6 @@ fn abs(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
             }
         }
         _ => Err("square expects only one argument".to_owned()),
-    }
-}
-
-fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        0 | 1 => Err("min expects more than 1 argument".to_owned()),
-        _ => {
-            let mut min = f64::INFINITY;
-            for &arg in args.iter() {
-                if let Value::Number(n) = arg {
-                    min = min.min(n);
-                } else {
-                    return Err("min needs numeric argument".to_owned());
-                }
-            }
-            Ok(Value::Number(min))
-        }
-    }
-}
-
-fn max(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        0 | 1 => Err("max expects more than 1 argument".to_owned()),
-        _ => {
-            let mut max = -f64::INFINITY;
-            for &arg in args.iter() {
-                if let Value::Number(n) = arg {
-                    max = max.max(n);
-                } else {
-                    return Err("max needs numeric argument".to_owned());
-                }
-            }
-            Ok(Value::Number(max))
-        }
-    }
-}
-
-fn floor(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n.floor()))
-            } else {
-                Err("floor needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("floor needs one argument".to_owned()),
     }
 }
 
@@ -1218,29 +1153,74 @@ fn ceil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
-fn is_number(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+// fn chr(vm: &Vm, args: &[Value]) -> Result<Value, String> {
+//     match args.len() {
+//         1 => {
+//             if let Value::VString(string) = args[0] {
+//                 Ok(Value::Number(vm.gc.deref(string).len() as f64))
+//             } else {
+//                 Err(format!(
+//                     "length needs a string as an argument, found {}",
+//                     args[0].type_of()
+//                 ))
+//             }
+//         }
+//         _ => Err("length needs one argument".to_owned()),
+//     }
+// }
+
+fn clock(vm: &Vm, _args: &[Value]) -> Result<Value, String> {
+    let time = vm.start_time.elapsed().as_secs_f64();
+    Ok(Value::Number(time))
+}
+
+fn float(vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => {
-            if let Value::Number(_) = args[0] {
-                Ok(Value::Bool(true))
+            if let Value::VString(string) = args[0] {
+                match vm.gc.deref(string).parse() {
+                    Ok(n) => Ok(Value::Number(n)),
+                    _ => Err("couldn't read number from string".to_owned()),
+                }
             } else {
-                Ok(Value::Bool(false))
+                Err(format!(
+                    "length needs a string as an argument, found {}",
+                    args[0].type_of()
+                ))
             }
         }
-        _ => Err("isNumber needs one argument".to_owned()),
+        _ => Err("int needs one argument".to_owned()),
     }
 }
 
-fn is_string(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+fn floor(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => {
-            if let Value::VString(_) = args[0] {
-                Ok(Value::Bool(true))
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n.floor()))
             } else {
-                Ok(Value::Bool(false))
+                Err("floor needs numeric argument".to_owned())
             }
         }
-        _ => Err("isString needs one argument".to_owned()),
+        _ => Err("floor needs one argument".to_owned()),
+    }
+}
+
+fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        2 => {
+            if let (Value::Instance(instance), Value::Class(class)) = (args[0], args[1]) {
+                let class_ref = vm.gc.deref(instance).class;
+                Ok(Value::Bool(class_ref == class))
+            } else {
+                Err(format!(
+                    "instanceof needs an instance and a class, found {} {}",
+                    args[0].type_of(),
+                    args[1].type_of()
+                ))
+            }
+        }
+        _ => Err("instanceof needs two arguments".to_owned()),
     }
 }
 
@@ -1270,32 +1250,6 @@ fn is_class(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
-fn is_nil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Nil = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
-        _ => Err("isNil needs one argument".to_owned()),
-    }
-}
-
-fn is_instance(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Instance(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
-        _ => Err("isInstance needs one argument".to_owned()),
-    }
-}
-
 fn is_closure(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => {
@@ -1322,20 +1276,155 @@ fn is_function(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
-fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> {
+fn is_instance(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        2 => {
-            if let (Value::Instance(instance), Value::Class(class)) = (args[0], args[1]) {
-                let class_ref = vm.gc.deref(instance).class;
-                Ok(Value::Bool(class_ref == class))
+        1 => {
+            if let Value::Instance(_) = args[0] {
+                Ok(Value::Bool(true))
             } else {
-                Err(format!(
-                    "instanceof needs an instance and a class, found {} {}",
-                    args[0].type_of(),
-                    args[1].type_of()
-                ))
+                Ok(Value::Bool(false))
             }
         }
-        _ => Err("instanceof needs two arguments".to_owned()),
+        _ => Err("isInstance needs one argument".to_owned()),
+    }
+}
+
+fn is_nil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Nil = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("isNil needs one argument".to_owned()),
+    }
+}
+
+fn is_number(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("isNumber needs one argument".to_owned()),
+    }
+}
+
+fn is_string(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::VString(_) = args[0] {
+                Ok(Value::Bool(true))
+            } else {
+                Ok(Value::Bool(false))
+            }
+        }
+        _ => Err("isString needs one argument".to_owned()),
+    }
+}
+
+fn lox_panic(vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    let mut terms: Vec<String> = vec![];
+
+    for &arg in args.iter() {
+        let formatter = GcTraceFormatter::new(arg, &vm.gc);
+        let term = format!("{}", formatter);
+        terms.push(term);
+    }
+
+    panic!("panic: {}", terms.join(", "))
+}
+
+fn max(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        0 | 1 => Err("max expects more than 1 argument".to_owned()),
+        _ => {
+            let mut max = -f64::INFINITY;
+            for &arg in args.iter() {
+                if let Value::Number(n) = arg {
+                    max = max.max(n);
+                } else {
+                    return Err("max needs numeric argument".to_owned());
+                }
+            }
+            Ok(Value::Number(max))
+        }
+    }
+}
+
+fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        0 | 1 => Err("min expects more than 1 argument".to_owned()),
+        _ => {
+            let mut min = f64::INFINITY;
+            for &arg in args.iter() {
+                if let Value::Number(n) = arg {
+                    min = min.min(n);
+                } else {
+                    return Err("min needs numeric argument".to_owned());
+                }
+            }
+            Ok(Value::Number(min))
+        }
+    }
+}
+
+// fn ord(vm: &Vm, args: &[Value]) -> Result<Value, String> {
+//     match args.len() {
+//         1 => {
+//             if let Value::VString(string) = args[0] {
+//                 Ok(Value::Number(vm.gc.deref(string).len() as f64))
+//             } else {
+//                 Err(format!(
+//                     "length needs a string as an argument, found {}",
+//                     args[0].type_of()
+//                 ))
+//             }
+//         }
+//         _ => Err("length needs one argument".to_owned()),
+//     }
+// }
+
+fn pow(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        2 => {
+            if let (Value::Number(n1), Value::Number(n2)) = (args[0], args[1]) {
+                Ok(Value::Number(n1.powf(n2)))
+            } else {
+                Err("sqrt needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("sqrt expects only one argument".to_owned()),
+    }
+}
+
+fn sqrt(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n.sqrt()))
+            } else {
+                Err("sqrt needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("sqrt expects only one argument".to_owned()),
+    }
+}
+
+fn square(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    match args.len() {
+        1 => {
+            if let Value::Number(n) = args[0] {
+                Ok(Value::Number(n * n))
+            } else {
+                Err("square needs numeric argument".to_owned())
+            }
+        }
+        _ => Err("square expects only one argument".to_owned()),
     }
 }

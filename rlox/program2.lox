@@ -1,5 +1,1 @@
-#include program3.lox
 
-fun s() {
-    print "include funziona";
-}

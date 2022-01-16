@@ -37,7 +37,7 @@ fn include_resolver(code: &mut String, imported: &mut Vec<String>) {
     let mut temp = code.split('\n').map(String::from).collect::<Vec<String>>();
     for line in temp.iter_mut() {
         if line.starts_with(INCLUDE_HEADER) {
-            let matches = INCLUDE_PATH.captures(&line);
+            let matches = INCLUDE_PATH.captures(line);
             if let Some(mat) = matches {
                 let file = mat[1].to_string();
                 if !imported.contains(&file) {

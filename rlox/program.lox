@@ -1,16 +1,2 @@
-#include program2.lox
-#include program3.lox
-
-fun p() {
-    var a = 1;
-    fun b() {
-        a++;
-        print a;
-    }
-    return b;
-}
-
-var d = p();
-d();
-s();
-ab();
+var a = [1, 2, 3, 4];
+print a.all();

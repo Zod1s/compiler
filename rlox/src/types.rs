@@ -24,6 +24,7 @@ impl Value {
         match self {
             Value::Bool(b) => !b,
             Value::Nil => true,
+            Value::Number(n) => *n == 0.0,
             _ => false,
         }
     }
