@@ -42,14 +42,14 @@ impl Vm {
         // native function definition
         vm.define_native("clock", NativeFn(clock));
         vm.define_native("panic", NativeFn(lox_panic));
-        vm.define_native("sqrt", NativeFn(sqrt));
-        vm.define_native("pow", NativeFn(pow));
-        vm.define_native("square", NativeFn(square));
-        vm.define_native("abs", NativeFn(abs));
+        // vm.define_native("sqrt", NativeFn(sqrt));
+        // vm.define_native("pow", NativeFn(pow));
+        // vm.define_native("square", NativeFn(square));
+        // vm.define_native("abs", NativeFn(abs));
         vm.define_native("min", NativeFn(min));
         vm.define_native("max", NativeFn(max));
-        vm.define_native("floor", NativeFn(floor));
-        vm.define_native("ceil", NativeFn(ceil));
+        // vm.define_native("floor", NativeFn(floor));
+        // vm.define_native("ceil", NativeFn(ceil));
         vm.define_native("isBool", NativeFn(is_bool));
         vm.define_native("isClass", NativeFn(is_class));
         vm.define_native("isClosure", NativeFn(is_closure));
@@ -59,8 +59,7 @@ impl Vm {
         vm.define_native("isNumber", NativeFn(is_number));
         vm.define_native("isString", NativeFn(is_string));
         vm.define_native("instanceof", NativeFn(instance_of));
-        // vm.define_native("length", NativeFn(length));
-        vm.define_native("float", NativeFn(float));
+        // vm.define_native("float", NativeFn(float));
 
         vm
     }
@@ -88,7 +87,7 @@ impl Vm {
                 }
             }
         }
-        fs::write(file, content.join("")).expect("Couldn't write to file");
+        fs::write(file, content.join("")).expect("Couldn't write to file.");
         Ok(())
     }
 
@@ -108,7 +107,7 @@ impl Vm {
         if let Some(value) = self.stack.pop() {
             value
         } else {
-            eprintln!("Error: popping a value from empty stack");
+            eprintln!("Error: popping a value from empty stack.");
             process::exit(65);
         }
     }
@@ -117,13 +116,13 @@ impl Vm {
         if let Value::Number(n) = self.pop() {
             Ok(n)
         } else {
-            Err(self.runtime_error(&format!("Error: no number found on stack {}", msg)))
+            Err(self.runtime_error(&format!("Error: no number found on stack {}.", msg)))
         }
     }
 
     fn push(&mut self, value: Value) -> Result<(), InterpretError> {
         if self.stack.capacity() == isize::MAX as usize {
-            Err(self.runtime_error("Stack full"))
+            Err(self.runtime_error("Stack full."))
         } else {
             self.stack.push(value);
             Ok(())
@@ -310,7 +309,7 @@ impl Vm {
                     }
                 }
                 OpCode::Div => self.bin_arith_op(|x, y| x / y, "when dividing")?,
-                OpCode::Equal => self.bin_op(|x, y| x == y)?,
+                OpCode::Equal => self.bin_bool_op(|x, y| x == y)?,
                 OpCode::False => {
                     self.push(Value::Bool(false))?;
                 }
@@ -578,7 +577,7 @@ impl Vm {
                     let value = self.pop().is_false();
                     self.push(Value::Bool(value))?
                 }
-                OpCode::NotEqual => self.bin_op(|x, y| x != y)?,
+                OpCode::NotEqual => self.bin_bool_op(|x, y| x != y)?,
                 OpCode::Pop => {
                     self.pop();
                 }
@@ -695,7 +694,7 @@ impl Vm {
         self.push_number(f(a, b))
     }
 
-    fn bin_op(&mut self, f: fn(Value, Value) -> bool) -> Result<(), InterpretError> {
+    fn bin_bool_op(&mut self, f: fn(Value, Value) -> bool) -> Result<(), InterpretError> {
         let (b, a) = (self.pop(), self.pop());
         self.push(Value::Bool(f(a, b)))
     }
@@ -905,17 +904,79 @@ impl Vm {
             }
         } else if let Value::VString(string) = receiver {
             match &*method_name {
+                "isAlpha" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("isAlpha requires no arguments."))
+                    } else {
+                        self.pop();
+                        self.push(Value::Bool(
+                            self.gc.deref(string).chars().all(char::is_alphabetic),
+                        ))
+                    }
+                }
+                "isAlphaNumeric" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("isAlphaNumeric requires no arguments."))
+                    } else {
+                        self.pop();
+                        self.push(Value::Bool(
+                            self.gc.deref(string).chars().all(char::is_alphanumeric),
+                        ))
+                    }
+                }
+                "isDigit" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("isDigit requires no arguments."))
+                    } else {
+                        self.pop();
+                        self.push(Value::Bool(
+                            self.gc.deref(string).chars().all(char::is_numeric),
+                        ))
+                    }
+                }
+
+                "float" => {
+                    if arg_count == 1 {
+                        let top = self.pop();
+                        if let Value::VString(string) = top {
+                            match self.gc.deref(string).parse() {
+                                Ok(n) => {
+                                    self.pop();
+                                    self.push_number(n)
+                                }
+                                _ => Err(self.runtime_error("couldn't read number from string")),
+                            }
+                        } else {
+                            Err(self.runtime_error(&format!(
+                                "float needs a number as an argument, found {}",
+                                top.type_of()
+                            )))
+                        }
+                    } else {
+                        Err(self.runtime_error("float needs one argument"))
+                    }
+                }
                 "length" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("Length requires no arguments."))
+                        Err(self.runtime_error("length requires no arguments."))
                     } else {
                         self.pop();
                         self.push_number(self.gc.deref(string).len() as f64)
                     }
                 }
+                "ord" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("ord requires no arguments."))
+                    } else if self.gc.deref(string).chars().count() == 1 {
+                        let c = self.gc.deref(string).chars().next().unwrap();
+                        self.push_number((c as u32) as f64)
+                    } else {
+                        Err(self.runtime_error("ord can be called on one-char strings only."))
+                    }
+                }
                 _ => {
                     Err(self
-                        .runtime_error(&format!("Strign doesn't have {} as method.", method_name)))
+                        .runtime_error(&format!("String doesn't have {} as method.", method_name)))
                 }
             }
         } else if let Value::Instance(instance) = receiver {
@@ -932,7 +993,7 @@ impl Vm {
             match &*method_name {
                 "all" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("All requires no arguments."))
+                        Err(self.runtime_error("all requires no arguments."))
                     } else {
                         self.pop();
                         self.push(Value::Bool(
@@ -942,7 +1003,7 @@ impl Vm {
                 }
                 "any" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("Any requires no arguments."))
+                        Err(self.runtime_error("any requires no arguments."))
                     } else {
                         self.pop();
                         self.push(Value::Bool(
@@ -952,19 +1013,19 @@ impl Vm {
                 }
                 "extend" => {
                     if arg_count != 1 {
-                        Err(self.runtime_error("Extend requires only one argument."))
+                        Err(self.runtime_error("extend requires only one argument."))
                     } else if let Value::Array(array_ref) = self.pop() {
                         let mut new_array = self.gc.deref(array_ref).clone();
                         self.gc.deref_mut(array).append(&mut new_array);
                         self.pop();
                         self.push(Value::Nil)
                     } else {
-                        Err(self.runtime_error("Extend needs an array as argument"))
+                        Err(self.runtime_error("extend needs an array as argument"))
                     }
                 }
                 "length" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("Length requires no arguments."))
+                        Err(self.runtime_error("length requires no arguments."))
                     } else {
                         self.pop();
                         self.push_number(self.gc.deref(array).len() as f64)
@@ -972,7 +1033,7 @@ impl Vm {
                 }
                 "pop" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("Pop requires no arguments."))
+                        Err(self.runtime_error("pop requires no arguments."))
                     } else if let Some(value) = self.gc.deref_mut(array).pop() {
                         self.pop();
                         self.push(value)
@@ -996,7 +1057,7 @@ impl Vm {
                 }
                 "reverse" => {
                     if arg_count != 0 {
-                        Err(self.runtime_error("Reverse requires only one argument."))
+                        Err(self.runtime_error("reverse requires only one argument."))
                     } else {
                         self.gc.deref_mut(array).reverse();
                         self.pop();
@@ -1022,6 +1083,87 @@ impl Vm {
                 _ => {
                     Err(self
                         .runtime_error(&format!("Array doesn't have {} as method.", method_name)))
+                }
+            }
+        } else if let Value::Number(n) = receiver {
+            match &*method_name {
+                "abs" => match arg_count {
+                    0 => {
+                        if let Value::Number(n) = self.pop() {
+                            self.push_number(n.abs())
+                        } else {
+                            Err(self.runtime_error("abs needs numeric argument."))
+                        }
+                    }
+                    _ => Err(self.runtime_error("abs expects only one argument.")),
+                },
+                "ceil" => match arg_count {
+                    0 => {
+                        if let Value::Number(n) = self.pop() {
+                            self.push_number(n.ceil())
+                        } else {
+                            Err(self.runtime_error("ceil needs numeric argument."))
+                        }
+                    }
+                    _ => Err(self.runtime_error("ceil needs one argument.")),
+                },
+                "chr" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("chr requires no arguments."))
+                    } else {
+                        self.pop();
+                        let n = if n.fract() == 0.0 {
+                            n as u32
+                        } else {
+                            return Err(self.runtime_error("chr needs an integer argument."));
+                        };
+                        let s = match char::from_u32(n) {
+                            Some(c) => self.intern(c.to_string()),
+                            None => {
+                                return Err(self.runtime_error("chr couldn't read number to char"))
+                            }
+                        };
+                        self.push(Value::VString(s))
+                    }
+                }
+                "floor" => {
+                    if arg_count == 0 {
+                        self.pop();
+                        self.push_number(n.floor())
+                    } else {
+                        Err(self.runtime_error("floor needs one argument."))
+                    }
+                }
+                "pow" => {
+                    if arg_count == 1 {
+                        if let Value::Number(n1) = self.pop() {
+                            self.push_number(n.powf(n1))
+                        } else {
+                            Err(self.runtime_error("sqrt needs numeric argument"))
+                        }
+                    } else {
+                        Err(self.runtime_error("sqrt expects only one argument"))
+                    }
+                }
+                "sqrt" => {
+                    if arg_count == 0 {
+                        self.pop();
+                        self.push_number(n.sqrt())
+                    } else {
+                        Err(self.runtime_error("sqrt expects only one argument"))
+                    }
+                }
+                "square" => {
+                    if arg_count == 0 {
+                        self.pop();
+                        self.push_number(n * n)
+                    } else {
+                        Err(self.runtime_error("square expects only one argument"))
+                    }
+                }
+                _ => {
+                    Err(self
+                        .runtime_error(&format!("Float doesn't have {} as method.", method_name)))
                 }
             }
         } else if method_name == "toString" {
@@ -1127,83 +1269,9 @@ impl CallFrame {
 
 // native functions
 
-fn abs(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n.abs()))
-            } else {
-                Err("square needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("square expects only one argument".to_owned()),
-    }
-}
-
-fn ceil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n.ceil()))
-            } else {
-                Err("floor needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("ceil needs one argument".to_owned()),
-    }
-}
-
-// fn chr(vm: &Vm, args: &[Value]) -> Result<Value, String> {
-//     match args.len() {
-//         1 => {
-//             if let Value::VString(string) = args[0] {
-//                 Ok(Value::Number(vm.gc.deref(string).len() as f64))
-//             } else {
-//                 Err(format!(
-//                     "length needs a string as an argument, found {}",
-//                     args[0].type_of()
-//                 ))
-//             }
-//         }
-//         _ => Err("length needs one argument".to_owned()),
-//     }
-// }
-
 fn clock(vm: &Vm, _args: &[Value]) -> Result<Value, String> {
     let time = vm.start_time.elapsed().as_secs_f64();
     Ok(Value::Number(time))
-}
-
-fn float(vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::VString(string) = args[0] {
-                match vm.gc.deref(string).parse() {
-                    Ok(n) => Ok(Value::Number(n)),
-                    _ => Err("couldn't read number from string".to_owned()),
-                }
-            } else {
-                Err(format!(
-                    "length needs a string as an argument, found {}",
-                    args[0].type_of()
-                ))
-            }
-        }
-        _ => Err("int needs one argument".to_owned()),
-    }
-}
-
-fn floor(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n.floor()))
-            } else {
-                Err("floor needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("floor needs one argument".to_owned()),
-    }
 }
 
 fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> {
@@ -1371,60 +1439,5 @@ fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
             }
             Ok(Value::Number(min))
         }
-    }
-}
-
-// fn ord(vm: &Vm, args: &[Value]) -> Result<Value, String> {
-//     match args.len() {
-//         1 => {
-//             if let Value::VString(string) = args[0] {
-//                 Ok(Value::Number(vm.gc.deref(string).len() as f64))
-//             } else {
-//                 Err(format!(
-//                     "length needs a string as an argument, found {}",
-//                     args[0].type_of()
-//                 ))
-//             }
-//         }
-//         _ => Err("length needs one argument".to_owned()),
-//     }
-// }
-
-fn pow(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        2 => {
-            if let (Value::Number(n1), Value::Number(n2)) = (args[0], args[1]) {
-                Ok(Value::Number(n1.powf(n2)))
-            } else {
-                Err("sqrt needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("sqrt expects only one argument".to_owned()),
-    }
-}
-
-fn sqrt(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n.sqrt()))
-            } else {
-                Err("sqrt needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("sqrt expects only one argument".to_owned()),
-    }
-}
-
-fn square(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        1 => {
-            if let Value::Number(n) = args[0] {
-                Ok(Value::Number(n * n))
-            } else {
-                Err("square needs numeric argument".to_owned())
-            }
-        }
-        _ => Err("square expects only one argument".to_owned()),
     }
 }
