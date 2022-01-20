@@ -65,12 +65,6 @@ pub struct Gc {
     free_slots: Vec<usize>,
 }
 
-// impl Default for Gc {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
-
 impl Gc {
     const NEXT_GC: usize = 1024 * 1024;
     const GROW_FACTOR: usize = 2;

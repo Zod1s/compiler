@@ -227,7 +227,23 @@ impl<'s> Scanner<'s> {
             .expect("Error advancing on character")
         {
             'a' => self.check_keyword(1, 2, "nd", And),
-            'c' => self.check_keyword(1, 4, "lass", Class),
+            'b' => self.check_keyword(1, 4, "reak", Break),
+            'c' => {
+                if self.current - self.start > 1 {
+                    match self
+                        .source
+                        .chars()
+                        .nth(self.start + 1)
+                        .expect("Error advancing on character")
+                    {
+                        'l' => self.check_keyword(2, 3, "ass", Class),
+                        'o' => self.check_keyword(2, 6, "ntinue", Continue),
+                        _ => Identifier,
+                    }
+                } else {
+                    Identifier
+                }
+            }
             'e' => self.check_keyword(1, 3, "lse", Else),
             'f' => {
                 if self.current - self.start > 1 {
@@ -246,7 +262,22 @@ impl<'s> Scanner<'s> {
                     Identifier
                 }
             }
-            'i' => self.check_keyword(1, 1, "f", If),
+            'i' => {
+                if self.current - self.start > 1 {
+                    match self
+                        .source
+                        .chars()
+                        .nth(self.start + 1)
+                        .expect("Error advancing on character")
+                    {
+                        'f' => If,
+                        'n' => self.check_keyword(2, 3, "put", Input),
+                        _ => Identifier,
+                    }
+                } else {
+                    Identifier
+                }
+            }
             'n' => self.check_keyword(1, 2, "il", Nil),
             'o' => self.check_keyword(1, 1, "r", Or),
             'p' => self.check_keyword(1, 4, "rint", Print),
@@ -357,12 +388,15 @@ pub enum TokenType {
     RString,
     // Keywords.
     And,
+    Break,
+    Continue,
     Class,
     Else,
     False,
     For,
     Fun,
     If,
+    Input,
     Nil,
     Or,
     Print,

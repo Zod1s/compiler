@@ -6,7 +6,12 @@ use crate::{
     types::{InterpretError, Table, Value},
 };
 use cpu_time::ProcessTime;
-use std::{fmt, fs, process};
+use rand::Rng;
+use std::{
+    fmt, fs,
+    io::{self, Write},
+    process,
+};
 
 pub struct Vm {
     debug: bool,
@@ -42,14 +47,8 @@ impl Vm {
         // native function definition
         vm.define_native("clock", NativeFn(clock));
         vm.define_native("panic", NativeFn(lox_panic));
-        // vm.define_native("sqrt", NativeFn(sqrt));
-        // vm.define_native("pow", NativeFn(pow));
-        // vm.define_native("square", NativeFn(square));
-        // vm.define_native("abs", NativeFn(abs));
         vm.define_native("min", NativeFn(min));
         vm.define_native("max", NativeFn(max));
-        // vm.define_native("floor", NativeFn(floor));
-        // vm.define_native("ceil", NativeFn(ceil));
         vm.define_native("isBool", NativeFn(is_bool));
         vm.define_native("isClass", NativeFn(is_class));
         vm.define_native("isClosure", NativeFn(is_closure));
@@ -59,7 +58,8 @@ impl Vm {
         vm.define_native("isNumber", NativeFn(is_number));
         vm.define_native("isString", NativeFn(is_string));
         vm.define_native("instanceof", NativeFn(instance_of));
-        // vm.define_native("float", NativeFn(float));
+        vm.define_native("random", NativeFn(random));
+        vm.define_native("randomInt", NativeFn(random_int));
 
         vm
     }
@@ -500,6 +500,27 @@ impl Vm {
                         return Err(self.runtime_error("Superclass must be a class."));
                     }
                 }
+                OpCode::Input => {
+                    let value = self.pop();
+                    if self.repl {
+                        print!(">  {}", GcTraceFormatter::new(value, &self.gc));
+                    } else {
+                        print!("{}", GcTraceFormatter::new(value, &self.gc));
+                    }
+                    match io::stdout().flush() {
+                        Ok(_) => {}
+                        Err(_) => return Err(self.runtime_error("Error while printing")),
+                    }
+                    let mut buffer = String::new();
+                    match io::stdin().read_line(&mut buffer) {
+                        Err(_) => return Err(InterpretError::Runtime),
+                        Ok(_) => {
+                            buffer.truncate(buffer.len() - 1);
+                            let string = self.intern(buffer);
+                            self.push(Value::VString(string))?
+                        }
+                    }
+                }
                 OpCode::Invoke((name, count)) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(name) {
                         self.invoke(name, count)?
@@ -936,24 +957,16 @@ impl Vm {
                 }
 
                 "float" => {
-                    if arg_count == 1 {
-                        let top = self.pop();
-                        if let Value::VString(string) = top {
-                            match self.gc.deref(string).parse() {
-                                Ok(n) => {
-                                    self.pop();
-                                    self.push_number(n)
-                                }
-                                _ => Err(self.runtime_error("couldn't read number from string")),
+                    if arg_count == 0 {
+                        match self.gc.deref(string).parse() {
+                            Ok(n) => {
+                                self.pop();
+                                self.push_number(n)
                             }
-                        } else {
-                            Err(self.runtime_error(&format!(
-                                "float needs a number as an argument, found {}",
-                                top.type_of()
-                            )))
+                            _ => Err(self.runtime_error("couldn't read number from string.")),
                         }
                     } else {
-                        Err(self.runtime_error("float needs one argument"))
+                        Err(self.runtime_error("float needs no arguments."))
                     }
                 }
                 "length" => {
@@ -1438,6 +1451,36 @@ fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
                 }
             }
             Ok(Value::Number(min))
+        }
+    }
+}
+
+fn random(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    if args.len() != 2 {
+        Err("random needs two arguments".to_owned())
+    } else {
+        let mut rng = rand::thread_rng();
+        if let (Value::Number(n0), Value::Number(n1)) = (args[0], args[1]) {
+            Ok(Value::Number(rng.gen_range(n0..n1)))
+        } else {
+            Err("random needs two numeric arguments".to_owned())
+        }
+    }
+}
+
+fn random_int(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
+    if args.len() != 2 {
+        Err("random needs two arguments".to_owned())
+    } else {
+        let mut rng = rand::thread_rng();
+        if let (Value::Number(n0), Value::Number(n1)) = (args[0], args[1]) {
+            if n0.fract() == 0.0 && n1.fract() == 0.0 {
+                Ok(Value::Number(rng.gen_range(n0 as usize..n1 as usize) as f64))
+            } else {
+                Err("randomInt needs two integers as arguments".to_owned())
+            }
+        } else {
+            Err("randomInt needs two numeric arguments".to_owned())
         }
     }
 }

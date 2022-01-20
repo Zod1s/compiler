@@ -141,6 +141,12 @@ impl<'s> Parser<'s> {
             Precedence::None,
         );
         rule(
+            TokenType::Input,
+            Some(Parser::input),
+            None,
+            Precedence::None,
+        );
+        rule(
             TokenType::RString,
             Some(Parser::string),
             None,
@@ -514,7 +520,6 @@ impl<'s> Parser<'s> {
         self.emit_pop();
     }
 
-    #[inline]
     fn variable(&mut self, can_assign: bool) {
         self.named_variable(self.previous, can_assign);
     }
@@ -681,6 +686,12 @@ impl<'s> Parser<'s> {
         self.emit_pop();
         self.parse_precedence(Precedence::Or);
         self.patch_jump(end_jump);
+    }
+
+    fn input(&mut self, _can_assign: bool) {
+        self.expression();
+        // self.consume(TokenType::Semicolon, "Expect ';' after value.");
+        self.emit_opcode(OpCode::Input);
     }
 
     fn call(&mut self, _can_assign: bool) {

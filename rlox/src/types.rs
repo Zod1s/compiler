@@ -44,10 +44,6 @@ impl Value {
             Value::VString(_) => "string",
         }
     }
-
-    // pub fn is_number(&self) -> bool {
-    //     matches!(self, Value::Number(_))
-    // }
 }
 
 impl GcTrace for Value {
@@ -63,7 +59,7 @@ impl GcTrace for Value {
             Value::NativeFn(_) => write!(f, "<native fn>"),
             Value::Nil => write!(f, "nil"),
             Value::Number(value) => write!(f, "{}", value),
-            Value::VString(value) => gc.deref(*value).format(f, gc),
+            Value::VString(value) => write!(f, "{}", gc.deref(*value)),
         }
     }
 

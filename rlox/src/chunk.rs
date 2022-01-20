@@ -31,6 +31,7 @@ pub enum OpCode {
     IncrementLocal(usize),
     IncrementUpvalue(usize),
     Inherit,
+    Input,
     Invoke((usize, usize)),
     Jump(usize),
     JumpIfFalse(usize),
@@ -207,8 +208,6 @@ impl<'s> Disassembler<'s> {
             }
 
             OpCode::Return => String::from("OP_RETURN"),
-            // OpCode::Increment => String::from("OP_INCREMENT"),
-            // OpCode::Decrement => String::from("OP_DECREMENT"),
             OpCode::ReturnNil => String::from("OP_RETURN_NIL"),
             OpCode::Negate => String::from("OP_NEGATE"),
             OpCode::Add => String::from("OP_ADD"),
@@ -226,6 +225,7 @@ impl<'s> Disassembler<'s> {
             OpCode::GreaterEqual => String::from("OP_GREATER_EQUAL"),
             OpCode::Less => String::from("OP_LESS"),
             OpCode::LessEqual => String::from("OP_LESS_EQUAL"),
+            OpCode::Input => String::from("OP_INPUT"),
             OpCode::Print => String::from("OP_PRINT"),
             OpCode::Pop => String::from("OP_POP"),
             OpCode::CloseUpvalue => String::from("OP_CLOSE_UPVALUE"),
