@@ -1,13 +1,1 @@
-var a = randomInt(0, 100);
-var found = false;
-while (!found) {
-    var i = (input "Dammi un numero: ").float();
-    if (i == a) {
-        found = true;
-        print "Numero trovato";
-    } else if (i < a) {
-        print "Numero troppo basso";
-    } else {
-        print "Numero troppo alto";
-    }
-}
+print max();

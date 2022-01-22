@@ -6,7 +6,6 @@ pub fn preprocessor(filename: &str) -> Result<String> {
     let mut program = fs::read_to_string(filename)?;
     let mut imported = vec![filename.to_string()];
     include_resolver(&mut program, &mut imported);
-    // println!("{}", code);
     Ok(program)
 }
 
@@ -20,7 +19,7 @@ pub fn preprocessor(filename: &str) -> Result<String> {
 | after the first non-#include line
 - syntax: #include {program_name}
 - program_name must include file extension
-- program_name can possibly contain a local path to another file (not yet implemented)
+- program_name can possibly contain a local path to another file
 - the whole line is substituted by the content of {program_name} after having
 | preprocessed it
 */

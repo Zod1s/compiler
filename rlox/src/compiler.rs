@@ -160,6 +160,7 @@ impl<'s> Parser<'s> {
         );
         rule(TokenType::And, None, Some(Parser::and_op), Precedence::And);
         rule(TokenType::Class, None, None, Precedence::None);
+        rule(TokenType::Const, None, None, Precedence::None);
         rule(TokenType::Else, None, None, Precedence::None);
         rule(
             TokenType::False,
@@ -278,6 +279,8 @@ impl<'s> Parser<'s> {
     fn declaration(&mut self) {
         if self.match_token(TokenType::Var) {
             self.var_declaration();
+        // } else if self.match_token(TokenType::Const) {
+        //     self.const_declaration();
         } else if self.match_token(TokenType::Fun) {
             self.fun_declaration();
         } else if self.match_token(TokenType::Class) {
@@ -291,7 +294,7 @@ impl<'s> Parser<'s> {
     }
 
     fn var_declaration(&mut self) {
-        let global: usize = self.parse_variable("Expect variable name.");
+        let global = self.parse_variable("Expect variable name.");
 
         if self.match_token(TokenType::Equal) {
             self.expression();
@@ -306,6 +309,23 @@ impl<'s> Parser<'s> {
 
         self.define_variable(global);
     }
+
+    // fn const_declaration(&mut self) {
+    //     let global = self.parse_variable("Expect variable name.");
+
+    //     if self.match_token(TokenType::Equal) {
+    //         self.expression();
+    //     } else {
+    //         self.emit_opcode(OpCode::Nil);
+    //     }
+
+    //     self.consume(
+    //         TokenType::Semicolon,
+    //         "Expect ';' after const declaration.",
+    //     );
+
+    //     self.define_constant(global);
+    // }
 
     fn fun_declaration(&mut self) {
         let global = self.parse_variable("Expect function name.");
@@ -465,7 +485,7 @@ impl<'s> Parser<'s> {
         }
 
         let mut loop_start = self.start_loop();
-        let mut exit_jump: Option<usize> = None;
+        let mut exit_jump = None;
 
         if !self.match_token(TokenType::Semicolon) {
             self.expression();
@@ -800,6 +820,14 @@ impl<'s> Parser<'s> {
         self.emit_opcode(OpCode::DefineGlobal(var))
     }
 
+    // fn define_constant(&mut self, var: usize) {
+    //     if self.compiler.scope_depth > 0 {
+    //         self.mark_initialized();
+    //         return;
+    //     }
+    //     self.emit_opcode(OpCode::DefineGlobal(var))
+    // }
+
     fn declare_varible(&mut self) {
         if self.compiler.scope_depth == 0 {
             return;
@@ -918,7 +946,7 @@ impl<'s> Parser<'s> {
     }
 
     fn resolve_local(&mut self, name: Token) -> Option<usize> {
-        let mut errors: Vec<&str> = Vec::new();
+        let mut errors = Vec::new();
         let result = self.compiler.resolve_local(name, &mut errors);
         while let Some(err) = errors.pop() {
             self.error(err);
@@ -927,7 +955,7 @@ impl<'s> Parser<'s> {
     }
 
     fn resolve_upvalue(&mut self, name: Token) -> Option<usize> {
-        let mut errors: Vec<&str> = Vec::new();
+        let mut errors = Vec::new();
         let result = self.compiler.resolve_upvalue(name, &mut errors);
         while let Some(err) = errors.pop() {
             self.error(err);

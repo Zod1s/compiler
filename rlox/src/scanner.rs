@@ -227,7 +227,6 @@ impl<'s> Scanner<'s> {
             .expect("Error advancing on character")
         {
             'a' => self.check_keyword(1, 2, "nd", And),
-            'b' => self.check_keyword(1, 4, "reak", Break),
             'c' => {
                 if self.current - self.start > 1 {
                     match self
@@ -237,7 +236,7 @@ impl<'s> Scanner<'s> {
                         .expect("Error advancing on character")
                     {
                         'l' => self.check_keyword(2, 3, "ass", Class),
-                        'o' => self.check_keyword(2, 6, "ntinue", Continue),
+                        'o' => self.check_keyword(2, 3, "nst", Const),
                         _ => Identifier,
                     }
                 } else {
@@ -388,9 +387,8 @@ pub enum TokenType {
     RString,
     // Keywords.
     And,
-    Break,
-    Continue,
     Class,
+    Const,
     Else,
     False,
     For,

@@ -924,67 +924,111 @@ impl Vm {
                 self.push(to_push)
             }
         } else if let Value::VString(string) = receiver {
-            match &*method_name {
-                "isAlpha" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("isAlpha requires no arguments."))
-                    } else {
-                        self.pop();
-                        self.push(Value::Bool(
-                            self.gc.deref(string).chars().all(char::is_alphabetic),
-                        ))
-                    }
-                }
-                "isAlphaNumeric" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("isAlphaNumeric requires no arguments."))
-                    } else {
-                        self.pop();
-                        self.push(Value::Bool(
-                            self.gc.deref(string).chars().all(char::is_alphanumeric),
-                        ))
-                    }
-                }
-                "isDigit" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("isDigit requires no arguments."))
-                    } else {
-                        self.pop();
-                        self.push(Value::Bool(
-                            self.gc.deref(string).chars().all(char::is_numeric),
-                        ))
-                    }
-                }
-
-                "float" => {
-                    if arg_count == 0 {
-                        match self.gc.deref(string).parse() {
-                            Ok(n) => {
-                                self.pop();
-                                self.push_number(n)
+            match method_name
+                .chars()
+                .next()
+                .expect("Method contains no characters")
+            {
+                'i' => match method_name.chars().nth(1) {
+                    Some('s') => match method_name.chars().nth(2) {
+                        Some('A') => {
+                            if method_name == "isAlpha" {
+                                if arg_count != 0 {
+                                    Err(self.runtime_error("isAlpha requires no arguments."))
+                                } else {
+                                    self.pop();
+                                    self.push(Value::Bool(
+                                        self.gc.deref(string).chars().all(char::is_alphabetic),
+                                    ))
+                                }
+                            } else if method_name == "isAlphanumeric" {
+                                if arg_count != 0 {
+                                    Err(self.runtime_error("isAlphaNumeric requires no arguments."))
+                                } else {
+                                    self.pop();
+                                    self.push(Value::Bool(
+                                        self.gc.deref(string).chars().all(char::is_alphanumeric),
+                                    ))
+                                }
+                            } else {
+                                Err(self.runtime_error(&format!(
+                                    "String doesn't have {} as method.",
+                                    method_name
+                                )))
                             }
-                            _ => Err(self.runtime_error("couldn't read number from string.")),
+                        }
+                        Some('D') => {
+                            if method_name == "isDigit" {
+                                if arg_count != 0 {
+                                    Err(self.runtime_error("isDigit requires no arguments."))
+                                } else {
+                                    self.pop();
+                                    self.push(Value::Bool(
+                                        self.gc.deref(string).chars().all(char::is_numeric),
+                                    ))
+                                }
+                            } else {
+                                Err(self.runtime_error(&format!(
+                                    "String doesn't have {} as method.",
+                                    method_name
+                                )))
+                            }
+                        }
+                        _ => Err(self.runtime_error(&format!(
+                            "String doesn't have {} as method.",
+                            method_name
+                        ))),
+                    },
+                    _ => Err(self
+                        .runtime_error(&format!("String doesn't have {} as method.", method_name))),
+                },
+                'f' => {
+                    if method_name == "float" {
+                        if arg_count != 0 {
+                            Err(self.runtime_error("ord requires no arguments."))
+                        } else if self.gc.deref(string).chars().count() == 1 {
+                            let c = self.gc.deref(string).chars().next().unwrap();
+                            self.push_number((c as u32) as f64)
+                        } else {
+                            Err(self.runtime_error("ord can be called on one-char strings only."))
                         }
                     } else {
-                        Err(self.runtime_error("float needs no arguments."))
+                        Err(self.runtime_error(&format!(
+                            "String doesn't have {} as method.",
+                            method_name
+                        )))
                     }
                 }
-                "length" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("length requires no arguments."))
+                'l' => {
+                    if method_name == "length" {
+                        if arg_count != 0 {
+                            Err(self.runtime_error("length requires no arguments."))
+                        } else {
+                            self.pop();
+                            self.push_number(self.gc.deref(string).len() as f64)
+                        }
                     } else {
-                        self.pop();
-                        self.push_number(self.gc.deref(string).len() as f64)
+                        Err(self.runtime_error(&format!(
+                            "String doesn't have {} as method.",
+                            method_name
+                        )))
                     }
                 }
-                "ord" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("ord requires no arguments."))
-                    } else if self.gc.deref(string).chars().count() == 1 {
-                        let c = self.gc.deref(string).chars().next().unwrap();
-                        self.push_number((c as u32) as f64)
+                'o' => {
+                    if method_name == "ord" {
+                        if arg_count != 0 {
+                            Err(self.runtime_error("ord requires no arguments."))
+                        } else if self.gc.deref(string).chars().count() == 1 {
+                            let c = self.gc.deref(string).chars().next().unwrap();
+                            self.push_number((c as u32) as f64)
+                        } else {
+                            Err(self.runtime_error("ord can be called on one-char strings only."))
+                        }
                     } else {
-                        Err(self.runtime_error("ord can be called on one-char strings only."))
+                        Err(self.runtime_error(&format!(
+                            "String doesn't have {} as method.",
+                            method_name
+                        )))
                     }
                 }
                 _ => {
@@ -1078,19 +1122,23 @@ impl Vm {
                     }
                 }
                 "sort" => {
-                    let array = self.gc.deref_mut(array);
-                    if array.iter().all(|&x| matches!(x, Value::Number(_))) {
-                        array.sort_by(|a, b| {
-                            if let (Value::Number(a), Value::Number(b)) = (a, b) {
-                                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Less)
-                            } else {
-                                panic!();
-                            }
-                        });
-                        self.pop();
-                        self.push(Value::Nil)
+                    if arg_count != 0 {
+                        Err(self.runtime_error("sort requires no arguments."))
                     } else {
-                        Err(self.runtime_error("Cannot sort an array with not-number elements"))
+                        let array = self.gc.deref_mut(array);
+                        if array.iter().all(|&x| matches!(x, Value::Number(_))) {
+                            array.sort_by(|a, b| {
+                                if let (Value::Number(a), Value::Number(b)) = (a, b) {
+                                    a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Less)
+                                } else {
+                                    panic!();
+                                }
+                            });
+                            self.pop();
+                            self.push(Value::Nil)
+                        } else {
+                            Err(self.runtime_error("Cannot sort an array with not-number elements"))
+                        }
                     }
                 }
                 _ => {
@@ -1100,26 +1148,24 @@ impl Vm {
             }
         } else if let Value::Number(n) = receiver {
             match &*method_name {
-                "abs" => match arg_count {
-                    0 => {
-                        if let Value::Number(n) = self.pop() {
-                            self.push_number(n.abs())
-                        } else {
-                            Err(self.runtime_error("abs needs numeric argument."))
-                        }
+                "abs" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("abs expects only one argument."))
+                    } else if let Value::Number(n) = self.pop() {
+                        self.push_number(n.abs())
+                    } else {
+                        Err(self.runtime_error("abs needs numeric argument."))
                     }
-                    _ => Err(self.runtime_error("abs expects only one argument.")),
-                },
-                "ceil" => match arg_count {
-                    0 => {
-                        if let Value::Number(n) = self.pop() {
-                            self.push_number(n.ceil())
-                        } else {
-                            Err(self.runtime_error("ceil needs numeric argument."))
-                        }
+                }
+                "ceil" => {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("ceil needs one argument."))
+                    } else if let Value::Number(n) = self.pop() {
+                        self.push_number(n.ceil())
+                    } else {
+                        Err(self.runtime_error("ceil needs numeric argument."))
                     }
-                    _ => Err(self.runtime_error("ceil needs one argument.")),
-                },
+                }
                 "chr" => {
                     if arg_count != 0 {
                         Err(self.runtime_error("chr requires no arguments."))
@@ -1140,38 +1186,36 @@ impl Vm {
                     }
                 }
                 "floor" => {
-                    if arg_count == 0 {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("floor needs one argument."))
+                    } else {
                         self.pop();
                         self.push_number(n.floor())
-                    } else {
-                        Err(self.runtime_error("floor needs one argument."))
                     }
                 }
                 "pow" => {
-                    if arg_count == 1 {
-                        if let Value::Number(n1) = self.pop() {
-                            self.push_number(n.powf(n1))
-                        } else {
-                            Err(self.runtime_error("sqrt needs numeric argument"))
-                        }
-                    } else {
+                    if arg_count != 1 {
                         Err(self.runtime_error("sqrt expects only one argument"))
+                    } else if let Value::Number(n1) = self.pop() {
+                        self.push_number(n.powf(n1))
+                    } else {
+                        Err(self.runtime_error("sqrt needs numeric argument"))
                     }
                 }
                 "sqrt" => {
-                    if arg_count == 0 {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("sqrt expects only one argument"))
+                    } else {
                         self.pop();
                         self.push_number(n.sqrt())
-                    } else {
-                        Err(self.runtime_error("sqrt expects only one argument"))
                     }
                 }
                 "square" => {
-                    if arg_count == 0 {
+                    if arg_count != 0 {
+                        Err(self.runtime_error("square expects only one argument"))
+                    } else {
                         self.pop();
                         self.push_number(n * n)
-                    } else {
-                        Err(self.runtime_error("square expects only one argument"))
                     }
                 }
                 _ => {
@@ -1204,11 +1248,11 @@ impl Vm {
             if let Value::Closure(closure) = method {
                 self.call(closure, count)
             } else {
-                Err(self.runtime_error("Got method that is not closure!"))
+                Err(self.runtime_error("Got method that is not closure."))
             }
         } else if self.gc.deref(name) == "toString" {
             if count != 0 {
-                Err(self.runtime_error("toString requires no arguments"))
+                Err(self.runtime_error("toString requires no arguments."))
             } else {
                 let name = class.name;
                 self.pop();
@@ -1307,104 +1351,56 @@ fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> {
 
 fn is_bool(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::Bool(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "bool")),
         _ => Err("isBool needs one argument".to_owned()),
     }
 }
 
 fn is_class(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::Class(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "class")),
         _ => Err("isClass needs one argument".to_owned()),
     }
 }
 
 fn is_closure(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::Closure(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "closure")),
         _ => Err("isClosure needs one argument".to_owned()),
     }
 }
 
 fn is_function(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::Function(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "function")),
         _ => Err("isFunction needs one argument".to_owned()),
     }
 }
 
 fn is_instance(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::Instance(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "instance")),
         _ => Err("isInstance needs one argument".to_owned()),
     }
 }
 
 fn is_nil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::Nil = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "nil")),
         _ => Err("isNil needs one argument".to_owned()),
     }
 }
 
 fn is_number(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::Number(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "number")),
         _ => Err("isNumber needs one argument".to_owned()),
     }
 }
 
 fn is_string(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
-        1 => {
-            if let Value::VString(_) = args[0] {
-                Ok(Value::Bool(true))
-            } else {
-                Ok(Value::Bool(false))
-            }
-        }
+        1 => Ok(Value::Bool(args[0].type_of() == "string")),
         _ => Err("isString needs one argument".to_owned()),
     }
 }
@@ -1422,37 +1418,27 @@ fn lox_panic(vm: &Vm, args: &[Value]) -> Result<Value, String> {
 }
 
 fn max(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        0 | 1 => Err("max expects more than 1 argument".to_owned()),
-        _ => {
-            let mut max = -f64::INFINITY;
-            for &arg in args.iter() {
-                if let Value::Number(n) = arg {
-                    max = max.max(n);
-                } else {
-                    return Err("max needs numeric argument".to_owned());
-                }
-            }
-            Ok(Value::Number(max))
+    let mut max = -f64::INFINITY;
+    for &arg in args.iter() {
+        if let Value::Number(n) = arg {
+            max = max.max(n);
+        } else {
+            return Err("max needs numeric argument".to_owned());
         }
     }
+    Ok(Value::Number(max))
 }
 
 fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    match args.len() {
-        0 | 1 => Err("min expects more than 1 argument".to_owned()),
-        _ => {
-            let mut min = f64::INFINITY;
-            for &arg in args.iter() {
-                if let Value::Number(n) = arg {
-                    min = min.min(n);
-                } else {
-                    return Err("min needs numeric argument".to_owned());
-                }
-            }
-            Ok(Value::Number(min))
+    let mut min = f64::INFINITY;
+    for &arg in args.iter() {
+        if let Value::Number(n) = arg {
+            min = min.min(n);
+        } else {
+            return Err("min needs numeric argument".to_owned());
         }
     }
+    Ok(Value::Number(min))
 }
 
 fn random(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
