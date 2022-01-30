@@ -239,13 +239,7 @@ impl Vm {
                                 if let Value::Number(v) = value {
                                     let val = Value::Number(v - 1.0);
                                     self.push(val)?;
-                                    if self.globals.insert(string_ref, val).is_none() {
-                                        self.globals.remove(&string_ref);
-                                        return Err(self.runtime_error(&format!(
-                                            "Undefined variable '{}'.",
-                                            self.gc.deref(string_ref)
-                                        )));
-                                    }
+                                    self.globals.insert(string_ref, val);
                                 } else {
                                     return Err(self.runtime_error(
                                         "Only numeric variables can be incremented.",
@@ -429,13 +423,7 @@ impl Vm {
                                 if let Value::Number(v) = value {
                                     let val = Value::Number(v + 1.0);
                                     self.push(val)?;
-                                    if self.globals.insert(string_ref, val).is_none() {
-                                        self.globals.remove(&string_ref);
-                                        return Err(self.runtime_error(&format!(
-                                            "Undefined variable '{}'.",
-                                            self.gc.deref(string_ref)
-                                        )));
-                                    }
+                                    self.globals.insert(string_ref, val);
                                 } else {
                                     return Err(self.runtime_error(
                                         "Only numeric variables can be incremented.",

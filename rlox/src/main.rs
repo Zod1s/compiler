@@ -23,7 +23,7 @@ use std::{env::args, process::exit};
 use types::InterpretError;
 use vm::Vm;
 
-fn main() {
+pub fn main() {
     let args = args().collect::<Vec<String>>();
     match args.len() {
         1 => repl(Vm::new(true)),
@@ -36,7 +36,7 @@ fn main() {
     }
 }
 
-pub fn run_file(filename: &str, mut vm: Vm) {
+fn run_file(filename: &str, mut vm: Vm) {
     let program = preprocessor(filename).expect("File not found");
     match vm.interpret(&program) {
         Err(InterpretError::Runtime) => {
@@ -51,7 +51,7 @@ pub fn run_file(filename: &str, mut vm: Vm) {
     }
 }
 
-pub fn repl(mut vm: Vm) {
+fn repl(mut vm: Vm) {
     let mut rl = Editor::<()>::new();
     if rl.load_history("history.txt").is_err() {}
     loop {
@@ -92,7 +92,7 @@ pub fn repl(mut vm: Vm) {
     rl.save_history("history.txt").unwrap();
 }
 
-pub fn dump(filename: &str, mut vm: Vm, to_dump: &str) {
+fn dump(filename: &str, mut vm: Vm, to_dump: &str) {
     let program = preprocessor(filename).expect("File not found");
     match vm.dump(&program, to_dump) {
         Err(InterpretError::Runtime) => {
