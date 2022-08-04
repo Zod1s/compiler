@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rustyline = "9.0.0"
+rustyline = "10.0.0"
 cpu-time = "1.0.0"
-regex = "1.4.5"
+regex = "1.5.5"
 lazy_static = "1.4.0"
 rand = "0.8.4"
 
