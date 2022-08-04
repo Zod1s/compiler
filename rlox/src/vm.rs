@@ -138,8 +138,6 @@ impl Vm {
         self.stack[self.stack.len() - 1 - index]
     }
 
-    // main function
-
     fn run(&mut self) -> Result<(), InterpretError> {
         loop {
             let instruction = self.current_chunk().get_opcode(self.current_frame().ip);

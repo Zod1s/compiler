@@ -26,15 +26,15 @@ pub struct GcRef<T: GcTrace> {
     _marker: PhantomData<T>,
 }
 
-impl<T: GcTrace> Copy for GcRef<T> {}
-impl<T: GcTrace> Eq for GcRef<T> {}
-
 impl<T: GcTrace> Clone for GcRef<T> {
     #[inline]
     fn clone(&self) -> GcRef<T> {
         *self
     }
 }
+
+impl<T: GcTrace> Copy for GcRef<T> {}
+impl<T: GcTrace> Eq for GcRef<T> {}
 
 impl<T: GcTrace> fmt::Debug for GcRef<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -70,9 +70,9 @@ impl Gc {
     const GROW_FACTOR: usize = 2;
 
     pub fn new() -> Self {
-        Gc {
+        Self {
             bytes_allocated: 0,
-            next_gc: Gc::NEXT_GC,
+            next_gc: Self::NEXT_GC,
             grey_stack: Vec::new(),
             objects: Vec::new(),
             strings: HashMap::new(),
@@ -180,7 +180,7 @@ impl Gc {
         self.remove_white_strings();
         self.sweep();
 
-        self.next_gc = self.bytes_allocated * Gc::GROW_FACTOR;
+        self.next_gc = self.bytes_allocated * Self::GROW_FACTOR;
 
         #[cfg(feature = "debug_gc_log")]
         eprintln!(
