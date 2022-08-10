@@ -103,6 +103,7 @@ impl Vm {
 
     // stack manipulation
 
+    #[inline]
     fn pop(&mut self) -> Value {
         if let Some(value) = self.stack.pop() {
             value
@@ -112,6 +113,7 @@ impl Vm {
         }
     }
 
+    #[inline]
     fn pop_number(&mut self, msg: &str) -> Result<f64, InterpretError> {
         if let Value::Number(n) = self.pop() {
             Ok(n)
@@ -120,6 +122,7 @@ impl Vm {
         }
     }
 
+    #[inline]
     fn push(&mut self, value: Value) -> Result<(), InterpretError> {
         if self.stack.capacity() == isize::MAX as usize {
             Err(self.runtime_error("Stack full."))
@@ -129,6 +132,7 @@ impl Vm {
         }
     }
 
+    #[inline]
     fn push_number(&mut self, n: f64) -> Result<(), InterpretError> {
         self.push(Value::Number(n))
     }
@@ -693,6 +697,7 @@ impl Vm {
 
     // helpers for binary operations
 
+    #[inline]
     fn bin_arith_op(&mut self, f: fn(f64, f64) -> f64, msg: &str) -> Result<(), InterpretError> {
         let (b, a) = (
             self.pop_number(&format!("as second term {}", msg))?,
@@ -701,6 +706,7 @@ impl Vm {
         self.push_number(f(a, b))
     }
 
+    #[inline]
     fn bin_bool_op(&mut self, f: fn(Value, Value) -> bool) -> Result<(), InterpretError> {
         let (b, a) = (self.pop(), self.pop());
         self.push(Value::Bool(f(a, b)))
@@ -1301,6 +1307,7 @@ struct CallFrame {
 }
 
 impl CallFrame {
+    #[inline]
     fn new(closure: GcRef<Closure>, slot: usize) -> Self {
         CallFrame {
             closure,
@@ -1312,6 +1319,7 @@ impl CallFrame {
 
 // native functions
 
+#[inline]
 fn clock(vm: &Vm, _args: &[Value]) -> Result<Value, String> {
     let time = vm.start_time.elapsed().as_secs_f64();
     Ok(Value::Number(time))
@@ -1335,6 +1343,7 @@ fn instance_of(vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_bool(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "bool")),
@@ -1342,6 +1351,7 @@ fn is_bool(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_class(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "class")),
@@ -1349,6 +1359,7 @@ fn is_class(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_closure(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "closure")),
@@ -1356,6 +1367,7 @@ fn is_closure(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_function(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "function")),
@@ -1363,6 +1375,7 @@ fn is_function(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_instance(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "instance")),
@@ -1370,6 +1383,7 @@ fn is_instance(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_nil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "nil")),
@@ -1377,6 +1391,7 @@ fn is_nil(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_number(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "number")),
@@ -1384,6 +1399,7 @@ fn is_number(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn is_string(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     match args.len() {
         1 => Ok(Value::Bool(args[0].type_of() == "string")),
@@ -1391,6 +1407,7 @@ fn is_string(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn lox_panic(vm: &Vm, args: &[Value]) -> Result<Value, String> {
     let mut terms: Vec<String> = vec![];
 
@@ -1403,6 +1420,7 @@ fn lox_panic(vm: &Vm, args: &[Value]) -> Result<Value, String> {
     panic!("panic: {}", terms.join(", "))
 }
 
+#[inline]
 fn max(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     let mut max = -f64::INFINITY;
     for &arg in args.iter() {
@@ -1415,6 +1433,7 @@ fn max(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     Ok(Value::Number(max))
 }
 
+#[inline]
 fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     let mut min = f64::INFINITY;
     for &arg in args.iter() {
@@ -1427,6 +1446,7 @@ fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     Ok(Value::Number(min))
 }
 
+#[inline]
 fn random(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     if args.len() != 2 {
         Err("random needs two arguments".to_owned())
@@ -1440,6 +1460,7 @@ fn random(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+#[inline]
 fn random_int(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
     if args.len() != 2 {
         Err("random needs two arguments".to_owned())

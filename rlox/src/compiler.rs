@@ -244,6 +244,7 @@ impl<'s> Parser<'s> {
         }
     }
 
+    #[inline]
     fn consume(&mut self, ttype: TokenType, message: &str) {
         if self.current.token_type == ttype {
             self.advance();
@@ -309,23 +310,6 @@ impl<'s> Parser<'s> {
 
         self.define_variable(global);
     }
-
-    // fn const_declaration(&mut self) {
-    //     let global = self.parse_variable("Expect variable name.");
-
-    //     if self.match_token(TokenType::Equal) {
-    //         self.expression();
-    //     } else {
-    //         self.emit_opcode(OpCode::Nil);
-    //     }
-
-    //     self.consume(
-    //         TokenType::Semicolon,
-    //         "Expect ';' after const declaration.",
-    //     );
-
-    //     self.define_constant(global);
-    // }
 
     fn fun_declaration(&mut self) {
         let global = self.parse_variable("Expect function name.");
@@ -421,6 +405,7 @@ impl<'s> Parser<'s> {
         self.compiler.scope_depth += 1;
     }
 
+    #[inline]
     fn block(&mut self) {
         while !(self.check(TokenType::RightBrace) || self.check(TokenType::Eof)) {
             self.declaration();
@@ -540,6 +525,7 @@ impl<'s> Parser<'s> {
         self.emit_pop();
     }
 
+    #[inline]
     fn variable(&mut self, can_assign: bool) {
         self.named_variable(self.previous, can_assign);
     }
@@ -600,6 +586,7 @@ impl<'s> Parser<'s> {
         self.emit_opcode(OpCode::Method(constant));
     }
 
+    #[inline]
     fn expression(&mut self) {
         self.parse_precedence(Precedence::Assignment);
     }
@@ -612,6 +599,7 @@ impl<'s> Parser<'s> {
         }
     }
 
+    #[inline]
     fn grouping(&mut self, _can_assign: bool) {
         self.expression();
         self.consume(TokenType::RightParen, "Expect ')' after expression.");
@@ -708,9 +696,9 @@ impl<'s> Parser<'s> {
         self.patch_jump(end_jump);
     }
 
+    #[inline]
     fn input(&mut self, _can_assign: bool) {
         self.expression();
-        // self.consume(TokenType::Semicolon, "Expect ';' after value.");
         self.emit_opcode(OpCode::Input);
     }
 
@@ -733,6 +721,7 @@ impl<'s> Parser<'s> {
         }
     }
 
+    #[inline]
     fn this(&mut self, _can_assign: bool) {
         if self.class_compiler.is_none() {
             self.error("Can't use 'this' outside of a class.");
@@ -820,14 +809,6 @@ impl<'s> Parser<'s> {
         self.emit_opcode(OpCode::DefineGlobal(var))
     }
 
-    // fn define_constant(&mut self, var: usize) {
-    //     if self.compiler.scope_depth > 0 {
-    //         self.mark_initialized();
-    //         return;
-    //     }
-    //     self.emit_opcode(OpCode::DefineGlobal(var))
-    // }
-
     fn declare_varible(&mut self) {
         if self.compiler.scope_depth == 0 {
             return;
@@ -840,6 +821,7 @@ impl<'s> Parser<'s> {
         self.add_local(name);
     }
 
+    #[inline]
     fn add_local(&mut self, name: Token<'s>) {
         self.compiler.locals.push(Local {
             name,
@@ -848,11 +830,13 @@ impl<'s> Parser<'s> {
         });
     }
 
+    #[inline]
     fn identifier_constant(&mut self, token: Token) -> usize {
         let string = self.gc.intern(token.lexeme.to_string());
         self.make_constant(Value::VString(string))
     }
 
+    #[inline]
     fn mark_initialized(&mut self) {
         if self.compiler.scope_depth == 0 {
             return;
@@ -987,6 +971,7 @@ impl<'s> Parser<'s> {
         }
     }
 
+    #[inline]
     fn emit_constant(&mut self, constant: Value) {
         let index = self.make_constant(constant);
         self.emit_opcode(OpCode::Constant(index));
@@ -997,6 +982,7 @@ impl<'s> Parser<'s> {
         self.compiler.function.chunk.add_constant(constant)
     }
 
+    #[inline]
     fn emit_jump(&mut self, jump: OpCode) -> usize {
         self.emit_opcode(jump);
         self.compiler.function.chunk.code.len() - 1
@@ -1052,6 +1038,7 @@ impl<'s> Parser<'s> {
     }
 }
 
+#[inline]
 pub fn compile(code: &str, gc: &mut Gc) -> Result<GcRef<Function>, InterpretError> {
     let parser = Parser::new(code, gc);
     parser.compile()

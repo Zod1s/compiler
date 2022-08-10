@@ -8,6 +8,7 @@ pub struct Scanner<'s> {
 }
 
 impl<'s> Scanner<'s> {
+    #[inline]
     pub fn new(source: &'s str) -> Self {
         Self {
             source,
@@ -123,6 +124,7 @@ impl<'s> Scanner<'s> {
         Token::new(Error, message, self.line)
     }
 
+    #[inline]
     fn advance(&mut self) -> char {
         self.current += 1;
         self.source
@@ -131,6 +133,7 @@ impl<'s> Scanner<'s> {
             .expect("Error advancing on character")
     }
 
+    #[inline]
     fn match_char(&mut self, expected: char) -> bool {
         if self.at_end() || self.source.chars().nth(self.current).unwrap() != expected {
             false
@@ -329,6 +332,7 @@ pub struct Token<'a> {
 }
 
 impl<'a> Token<'a> {
+    #[inline]
     pub fn new(token_type: TokenType, lexeme: &'a str, line: usize) -> Self {
         Self {
             token_type,
@@ -337,6 +341,7 @@ impl<'a> Token<'a> {
         }
     }
 
+    #[inline]
     pub fn syntethic(lexeme: &'a str) -> Self {
         Self {
             token_type: Error,

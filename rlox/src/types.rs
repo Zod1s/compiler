@@ -20,6 +20,7 @@ pub enum Value {
 }
 
 impl Value {
+    #[inline]
     pub fn is_false(&self) -> bool {
         match self {
             Value::Bool(b) => !b,
@@ -29,6 +30,7 @@ impl Value {
         }
     }
 
+    #[inline]
     pub fn type_of(&self) -> &str {
         match self {
             Value::Array(_) => "array",

@@ -37,6 +37,7 @@ impl<T: GcTrace> Copy for GcRef<T> {}
 impl<T: GcTrace> Eq for GcRef<T> {}
 
 impl<T: GcTrace> fmt::Debug for GcRef<T> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let full_name = type_name::<T>();
         full_name.split("::").last().unwrap();
@@ -45,12 +46,14 @@ impl<T: GcTrace> fmt::Debug for GcRef<T> {
 }
 
 impl<T: GcTrace> PartialEq for GcRef<T> {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.index == other.index
     }
 }
 
 impl hash::Hash for GcRef<String> {
+    #[inline]
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
         self.index.hash(state)
     }
@@ -69,6 +72,7 @@ impl Gc {
     const NEXT_GC: usize = 1024 * 1024;
     const GROW_FACTOR: usize = 2;
 
+    #[inline]
     pub fn new() -> Self {
         Self {
             bytes_allocated: 0,
@@ -224,6 +228,7 @@ impl Gc {
         }
     }
 
+    #[inline]
     pub fn mark_table(&mut self, table: &Table) {
         for (&k, &v) in table {
             self.mark_object(k);
@@ -231,6 +236,7 @@ impl Gc {
         }
     }
 
+    #[inline]
     fn trace_references(&mut self) {
         while let Some(index) = self.grey_stack.pop() {
             self.blacken_object(index);

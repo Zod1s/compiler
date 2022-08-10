@@ -1,11 +1,3 @@
-// #![allow(
-//     dead_code,
-//     unused_variables,
-//     unreachable_patterns,
-//     irrefutable_let_patterns,
-//     clippy::map_entry,
-//     clippy::enum_variant_names
-// )]
 #![deny(clippy::all)]
 
 mod chunk;
@@ -52,7 +44,7 @@ fn run_file(filename: &str, mut vm: Vm) {
 }
 
 fn repl(mut vm: Vm) {
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<()>::new().unwrap();
     if rl.load_history("history.txt").is_err() {}
     loop {
         let readline = rl.readline(">> ");

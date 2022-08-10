@@ -67,6 +67,7 @@ pub struct Chunk {
 }
 
 impl Chunk {
+    #[inline]
     pub fn new() -> Self {
         Chunk {
             code: Vec::new(),
@@ -91,6 +92,7 @@ impl Chunk {
         self.constants[index]
     }
 
+    #[inline]
     pub fn add_constant(&mut self, value: Value) -> usize {
         self.constants.push(value);
         self.constants.len() - 1
@@ -125,6 +127,7 @@ pub struct Disassembler<'s> {
 }
 
 impl<'s> Disassembler<'s> {
+    #[inline]
     pub fn new(gc: &'s Gc, chunk: &'s Chunk, stack: Option<&'s Vec<Value>>) -> Self {
         Disassembler { gc, chunk, stack }
     }
@@ -247,6 +250,7 @@ impl<'s> Disassembler<'s> {
         )
     }
 
+    #[inline]
     fn value_instruction_to_string(&self, instruction: &str, index: usize) -> String {
         format!("{:<16} {:4}", instruction, index)
     }
@@ -262,6 +266,7 @@ impl<'s> Disassembler<'s> {
         )
     }
 
+    #[inline]
     pub fn disassemble(&self, name: &str) {
         println!("{}", self.disassemble_to_string(name));
     }

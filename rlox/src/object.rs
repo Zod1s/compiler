@@ -13,6 +13,7 @@ pub struct FunctionUpvalue {
 }
 
 impl FunctionUpvalue {
+    #[inline]
     pub fn new(index: usize, is_local: bool) -> Self {
         Self { index, is_local }
     }
@@ -27,6 +28,7 @@ pub struct Function {
 }
 
 impl Function {
+    #[inline]
     pub fn new(name: GcRef<String>) -> Self {
         Self {
             arity: 0,
@@ -69,6 +71,7 @@ pub struct Upvalue {
 }
 
 impl Upvalue {
+    #[inline]
     pub fn new(location: usize) -> Self {
         Self {
             location,
@@ -84,6 +87,7 @@ pub struct Closure {
 }
 
 impl Closure {
+    #[inline]
     pub fn new(function: GcRef<Function>) -> Self {
         Self {
             function,
@@ -99,6 +103,7 @@ pub struct Class {
 }
 
 impl Class {
+    #[inline]
     pub fn new(name: GcRef<String>) -> Self {
         Self {
             name,
@@ -114,6 +119,7 @@ pub struct Instance {
 }
 
 impl Instance {
+    #[inline]
     pub fn new(class: GcRef<Class>) -> Self {
         Self {
             class,
@@ -129,12 +135,14 @@ pub struct BoundMethod {
 }
 
 impl BoundMethod {
+    #[inline]
     pub fn new(receiver: Value, method: GcRef<Closure>) -> Self {
         Self { receiver, method }
     }
 }
 
 impl GcTrace for String {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
         write!(f, "\"{}\"", self)
     }
@@ -159,6 +167,7 @@ impl GcTrace for String {
 }
 
 impl GcTrace for Function {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         let name = &gc.deref(self.name);
         if name.is_empty() {
@@ -168,6 +177,7 @@ impl GcTrace for Function {
         }
     }
 
+    #[inline]
     fn size(&self) -> usize {
         mem::size_of::<Function>()
             + self.upvalues.capacity() * mem::size_of::<FunctionUpvalue>()
@@ -176,6 +186,7 @@ impl GcTrace for Function {
             + self.chunk.constants.capacity() * mem::size_of::<usize>()
     }
 
+    #[inline]
     fn trace(&self, gc: &mut Gc) {
         gc.mark_object(self.name);
         for &constant in &self.chunk.constants {
@@ -195,6 +206,7 @@ impl GcTrace for Function {
 }
 
 impl GcTrace for Upvalue {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, _gc: &Gc) -> fmt::Result {
         write!(f, "upvalue")
     }
@@ -204,6 +216,7 @@ impl GcTrace for Upvalue {
         mem::size_of::<Upvalue>()
     }
 
+    #[inline]
     fn trace(&self, gc: &mut Gc) {
         if let Some(obj) = self.closed {
             gc.mark_value(obj)
@@ -222,6 +235,7 @@ impl GcTrace for Upvalue {
 }
 
 impl GcTrace for Closure {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         gc.deref(self.function).format(f, gc)
     }
@@ -231,6 +245,7 @@ impl GcTrace for Closure {
         mem::size_of::<Closure>() + self.upvalues.capacity() * mem::size_of::<GcRef<Upvalue>>()
     }
 
+    #[inline]
     fn trace(&self, gc: &mut Gc) {
         gc.mark_object(self.function);
         for &upvalue in &self.upvalues {
@@ -250,6 +265,7 @@ impl GcTrace for Closure {
 }
 
 impl GcTrace for Class {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         let name = gc.deref(self.name);
         write!(f, "{}", name)
@@ -260,6 +276,7 @@ impl GcTrace for Class {
         mem::size_of::<Class>()
     }
 
+    #[inline]
     fn trace(&self, gc: &mut Gc) {
         gc.mark_object(self.name);
         gc.mark_table(&self.methods);
@@ -277,6 +294,7 @@ impl GcTrace for Class {
 }
 
 impl GcTrace for Instance {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         let class = gc.deref(self.class);
         let name = gc.deref(class.name);
@@ -288,6 +306,7 @@ impl GcTrace for Instance {
         mem::size_of::<Class>()
     }
 
+    #[inline]
     fn trace(&self, gc: &mut Gc) {
         gc.mark_object(self.class);
         gc.mark_table(&self.fields);
@@ -305,6 +324,7 @@ impl GcTrace for Instance {
 }
 
 impl GcTrace for BoundMethod {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         let closure = gc.deref(self.method);
         closure.format(f, gc)
@@ -315,6 +335,7 @@ impl GcTrace for BoundMethod {
         mem::size_of::<BoundMethod>()
     }
 
+    #[inline]
     fn trace(&self, gc: &mut Gc) {
         gc.mark_value(self.receiver);
         gc.mark_object(self.method);
@@ -332,6 +353,7 @@ impl GcTrace for BoundMethod {
 }
 
 impl GcTrace for Vec<Value> {
+    #[inline]
     fn format(&self, f: &mut fmt::Formatter<'_>, gc: &Gc) -> fmt::Result {
         write!(f, "[")?;
         for i in 0..self.len() {
@@ -348,6 +370,7 @@ impl GcTrace for Vec<Value> {
         mem::size_of::<Vec<Value>>() + self.capacity() * mem::size_of::<Value>()
     }
 
+    #[inline]
     fn trace(&self, gc: &mut Gc) {
         for &value in self {
             gc.mark_value(value);
