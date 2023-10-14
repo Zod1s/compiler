@@ -165,10 +165,14 @@ impl<'s> Disassembler<'s> {
             }
             OpCode::GetGlobal(value) => self.const_instruction_to_string("OP_GET_GLOBAL", *value),
             OpCode::SetGlobal(value) => self.const_instruction_to_string("OP_SET_GLOBAL", *value),
-            OpCode::GetLocal(value) => self.value_instruction_to_string("OP_GET_LOCAL", *value),
-            OpCode::SetLocal(value) => self.value_instruction_to_string("OP_SET_LOCAL", *value),
-            OpCode::GetUpvalue(value) => self.value_instruction_to_string("OP_GET_UPVALUE", *value),
-            OpCode::SetUpvalue(value) => self.value_instruction_to_string("OP_SET_UPVALUE", *value),
+            OpCode::GetLocal(value) => Self::value_instruction_to_string("OP_GET_LOCAL", *value),
+            OpCode::SetLocal(value) => Self::value_instruction_to_string("OP_SET_LOCAL", *value),
+            OpCode::GetUpvalue(value) => {
+                Self::value_instruction_to_string("OP_GET_UPVALUE", *value)
+            }
+            OpCode::SetUpvalue(value) => {
+                Self::value_instruction_to_string("OP_SET_UPVALUE", *value)
+            }
             OpCode::GetProperty(value) => {
                 self.const_instruction_to_string("OP_GET_PROPERTY", *value)
             }
@@ -177,10 +181,10 @@ impl<'s> Disassembler<'s> {
             }
             OpCode::Method(value) => self.const_instruction_to_string("OP_METHOD", *value),
             OpCode::JumpIfFalse(value) => {
-                self.value_instruction_to_string("OP_JUMP_IF_FALSE", *value)
+                Self::value_instruction_to_string("OP_JUMP_IF_FALSE", *value)
             }
-            OpCode::Jump(value) => self.value_instruction_to_string("OP_JUMP", *value),
-            OpCode::Loop(value) => self.value_instruction_to_string("OP_LOOP", *value),
+            OpCode::Jump(value) => Self::value_instruction_to_string("OP_JUMP", *value),
+            OpCode::Loop(value) => Self::value_instruction_to_string("OP_LOOP", *value),
             OpCode::Call(value) => format!("{:<16} {:4}", "OP_CALL", *value),
             OpCode::Closure(value) => self.const_instruction_to_string("OP_CLOSURE", *value),
             OpCode::Class(value) => self.const_instruction_to_string("OP_CLASS", *value),
@@ -192,22 +196,22 @@ impl<'s> Disassembler<'s> {
             }
             OpCode::GetSuper(value) => self.const_instruction_to_string("OP_GET_SUPER", *value),
             OpCode::IncrementGlobal(value) => {
-                self.value_instruction_to_string("OP_INCREMENT_GLOBAL", *value)
+                Self::value_instruction_to_string("OP_INCREMENT_GLOBAL", *value)
             }
             OpCode::IncrementLocal(value) => {
-                self.value_instruction_to_string("OP_INCREMENT_LOCAL", *value)
+                Self::value_instruction_to_string("OP_INCREMENT_LOCAL", *value)
             }
             OpCode::IncrementUpvalue(value) => {
-                self.value_instruction_to_string("OP_INCREMENT_UPVALUE", *value)
+                Self::value_instruction_to_string("OP_INCREMENT_UPVALUE", *value)
             }
             OpCode::DecrementGlobal(value) => {
-                self.value_instruction_to_string("OP_DECREMENT_GLOBAL", *value)
+                Self::value_instruction_to_string("OP_DECREMENT_GLOBAL", *value)
             }
             OpCode::DecrementLocal(value) => {
-                self.value_instruction_to_string("OP_DECREMENT_LOCAL", *value)
+                Self::value_instruction_to_string("OP_DECREMENT_LOCAL", *value)
             }
             OpCode::DecrementUpvalue(value) => {
-                self.value_instruction_to_string("OP_DECREMENT_UPVALUE", *value)
+                Self::value_instruction_to_string("OP_DECREMENT_UPVALUE", *value)
             }
 
             OpCode::Return => String::from("OP_RETURN"),
@@ -251,7 +255,7 @@ impl<'s> Disassembler<'s> {
     }
 
     #[inline]
-    fn value_instruction_to_string(&self, instruction: &str, index: usize) -> String {
+    fn value_instruction_to_string(instruction: &str, index: usize) -> String {
         format!("{:<16} {:4}", instruction, index)
     }
 

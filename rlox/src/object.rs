@@ -219,7 +219,7 @@ impl GcTrace for Upvalue {
     #[inline]
     fn trace(&self, gc: &mut Gc) {
         if let Some(obj) = self.closed {
-            gc.mark_value(obj)
+            gc.mark_value(obj);
         }
     }
 

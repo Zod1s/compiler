@@ -34,18 +34,18 @@ lazy_static! {
 
 fn include_resolver(code: &mut String, imported: &mut Vec<String>) {
     let mut temp = code.split('\n').map(String::from).collect::<Vec<String>>();
-    for line in temp.iter_mut() {
+    for line in &mut temp {
         if line.starts_with(INCLUDE_HEADER) {
             let matches = INCLUDE_PATH.captures(line);
             if let Some(mat) = matches {
                 let file = mat[1].to_string();
-                if !imported.contains(&file) {
+                if imported.contains(&file) {
+                    *line = String::new();
+                } else {
                     imported.push(file.clone());
                     let mut import_file = fs::read_to_string(file).expect("File not found");
                     include_resolver(&mut import_file, imported);
                     *line = import_file;
-                } else {
-                    *line = String::new();
                 }
             } else {
                 panic!("INCLUDE Error: expected filename, found {}", line);

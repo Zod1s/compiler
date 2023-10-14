@@ -55,7 +55,7 @@ impl<T: GcTrace> PartialEq for GcRef<T> {
 impl hash::Hash for GcRef<String> {
     #[inline]
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        self.index.hash(state)
+        self.index.hash(state);
     }
 }
 
@@ -172,7 +172,7 @@ impl Gc {
             self.bytes_allocated -= old.size;
             self.free_slots.push(index);
         } else {
-            panic!("Double free on {}", index)
+            panic!("Double free on {}", index);
         }
     }
 

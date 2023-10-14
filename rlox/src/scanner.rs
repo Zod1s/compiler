@@ -19,7 +19,7 @@ impl<'s> Scanner<'s> {
     }
 
     pub fn scan_token(&mut self) -> Token<'s> {
-        self.skip_withespaces();
+        self.skip_whitespaces();
         self.start = self.current;
 
         if self.at_end() {
@@ -143,7 +143,7 @@ impl<'s> Scanner<'s> {
         }
     }
 
-    fn skip_withespaces(&mut self) {
+    fn skip_whitespaces(&mut self) {
         loop {
             match self.peek() {
                 ' ' | '\t' | '\r' => {
@@ -351,7 +351,13 @@ impl<'a> Token<'a> {
     }
 }
 
-use self::TokenType::*;
+use self::TokenType::{
+    And, Bang, BangEqual, Class, Comma, Const, Dot, Else, Eof, Equal, EqualEqual, Error, False,
+    For, Fun, Greater, GreaterEqual, Identifier, If, Input, LeftBrace, LeftBracket, LeftParen,
+    Less, LessEqual, LessPipe, Minus, MinusEqual, MinusMinus, Nil, Number, Or, Plus, PlusEqual,
+    PlusPlus, Print, RString, Rem, Return, RightBrace, RightBracket, RightParen, Semicolon, Slash,
+    SlashEqual, Star, StarEqual, Super, This, True, Var, While,
+};
 
 #[derive(Clone, PartialEq, Debug, Eq, Hash, Copy)]
 pub enum TokenType {

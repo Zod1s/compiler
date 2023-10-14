@@ -1,6 +1,6 @@
 use crate::{
     gc::{Gc, GcRef, GcTrace},
-    object::*,
+    object::{BoundMethod, Class, Closure, Function, Instance, NativeFn},
 };
 use std::{any::Any, collections::HashMap, fmt};
 
@@ -115,7 +115,7 @@ pub enum Precedence {
 }
 
 impl Precedence {
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Precedence::None => Precedence::Assignment,
             Precedence::Assignment => Precedence::Or,

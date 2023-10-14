@@ -2,7 +2,7 @@ use crate::{
     chunk::{Chunk, Disassembler, OpCode},
     compiler,
     gc::{Gc, GcRef, GcTrace, GcTraceFormatter},
-    object::*,
+    object::{BoundMethod, Class, Closure, Function, Instance, NativeFn, Upvalue},
     types::{InterpretError, Table, Value},
 };
 use cpu_time::ProcessTime;
@@ -162,19 +162,19 @@ impl Vm {
                         let b = self.gc.deref(b);
                         let new = format!("{}{}", a, b);
                         let string = self.intern(new);
-                        self.push(Value::VString(string))?
+                        self.push(Value::VString(string))?;
                     }
                     (Value::VString(b), Value::Number(a)) => {
                         let b = self.gc.deref(b);
                         let new = format!("{}{}", a, b);
                         let string = self.intern(new);
-                        self.push(Value::VString(string))?
+                        self.push(Value::VString(string))?;
                     }
                     (Value::Number(b), Value::VString(a)) => {
                         let a = self.gc.deref(a);
                         let new = format!("{}{}", a, b);
                         let string = self.intern(new);
-                        self.push(Value::VString(string))?
+                        self.push(Value::VString(string))?;
                     }
                     (Value::Array(b), Value::Array(a)) => {
                         let a = self.gc.deref(a);
@@ -182,7 +182,7 @@ impl Vm {
                         let mut c = a.clone();
                         c.extend(b);
                         let c = self.alloc(c);
-                        self.push(Value::Array(c))?
+                        self.push(Value::Array(c))?;
                     }
                     _ => {
                         return Err(self.runtime_error(
@@ -204,7 +204,7 @@ impl Vm {
                     if let Value::VString(name) = self.current_chunk().constants[value] {
                         let class = Class::new(name);
                         let class = self.alloc(class);
-                        self.push(Value::Class(class))?
+                        self.push(Value::Class(class))?;
                     } else {
                         return Err(self
                             .runtime_error("Error: Invalid identifier found for usage on stack."));
@@ -229,7 +229,7 @@ impl Vm {
                             closure.upvalues.push(value);
                         }
                         let closure = self.alloc(closure);
-                        self.push(Value::Closure(closure))?
+                        self.push(Value::Closure(closure))?;
                     }
                     _ => return Err(self.runtime_error("Error: no function found.")),
                 },
@@ -319,7 +319,7 @@ impl Vm {
                     if let Value::Array(array) = self.pop() {
                         let array = self.gc.deref(array);
                         let value = array[index as usize];
-                        self.push(value)?
+                        self.push(value)?;
                     } else {
                         return Err(
                             self.runtime_error("No array found on stack when indexing an array.")
@@ -352,7 +352,7 @@ impl Vm {
                             let value = instance.fields.get(&name);
                             if let Some(&value) = value {
                                 self.pop();
-                                self.push(value)?
+                                self.push(value)?;
                             } else {
                                 let class = instance.class;
                                 self.bind_method(class, name)?;
@@ -369,7 +369,7 @@ impl Vm {
                 OpCode::GetSuper(slot) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(slot) {
                         if let Value::Class(superclass) = self.pop() {
-                            self.bind_method(superclass, name)?
+                            self.bind_method(superclass, name)?;
                         } else {
                             return Err(self.runtime_error("No superclass found on the stack"));
                         }
@@ -388,7 +388,7 @@ impl Vm {
                             self.stack[upvalue.location]
                         }
                     };
-                    self.push(value)?
+                    self.push(value)?;
                 }
                 OpCode::Greater => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => self.push(Value::Bool(a > b))?,
@@ -396,7 +396,7 @@ impl Vm {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a > b);
-                        self.push(result)?
+                        self.push(result)?;
                     }
                     _ => {
                         return Err(
@@ -410,7 +410,7 @@ impl Vm {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a >= b);
-                        self.push(result)?
+                        self.push(result)?;
                     }
                     _ => {
                         return Err(
@@ -502,18 +502,25 @@ impl Vm {
                         Err(_) => return Err(self.runtime_error("Error while printing")),
                     }
                     let mut buffer = String::new();
-                    match io::stdin().read_line(&mut buffer) {
-                        Err(_) => return Err(InterpretError::Runtime),
-                        Ok(_) => {
-                            buffer.truncate(buffer.len() - 1);
-                            let string = self.intern(buffer);
-                            self.push(Value::VString(string))?
-                        }
+                    if let Err(_) = io::stdin().read_line(&mut buffer) {
+                        return Err(InterpretError::Runtime);
+                    } else {
+                        buffer.truncate(buffer.len() - 1);
+                        let string = self.intern(buffer);
+                        self.push(Value::VString(string))?;
                     }
+                    // match io::stdin().read_line(&mut buffer) {
+                    //     Err(_) => return Err(InterpretError::Runtime),
+                    //     Ok(_) => {
+                    //         buffer.truncate(buffer.len() - 1);
+                    //         let string = self.intern(buffer);
+                    //         self.push(Value::VString(string))?
+                    //     }
+                    // }
                 }
                 OpCode::Invoke((name, count)) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(name) {
-                        self.invoke(name, count)?
+                        self.invoke(name, count)?;
                     } else {
                         return Err(self
                             .runtime_error("Error: Invalid identifier found for usage on stack."));
@@ -533,7 +540,7 @@ impl Vm {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a < b);
-                        self.push(result)?
+                        self.push(result)?;
                     }
                     _ => {
                         return Err(
@@ -547,7 +554,7 @@ impl Vm {
                         let a = self.gc.deref(a);
                         let b = self.gc.deref(b);
                         let result = Value::Bool(a <= b);
-                        self.push(result)?
+                        self.push(result)?;
                     }
                     _ => {
                         return Err(
@@ -560,7 +567,7 @@ impl Vm {
                 }
                 OpCode::Method(slot) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(slot) {
-                        self.define_method(name)?
+                        self.define_method(name)?;
                     } else {
                         return Err(self
                             .runtime_error("Error: Invalid identifier found for usage on stack."));
@@ -575,18 +582,18 @@ impl Vm {
                         let a = a as usize;
                         let b = b as usize;
                         let rem = a % b;
-                        self.push(Value::Number(rem as f64))?
+                        self.push(Value::Number(rem as f64))?;
                     }
                 }
                 OpCode::Mul => self.bin_arith_op(|x, y| x * y, "when multiplying")?,
                 OpCode::Negate => {
                     let n = self.pop_number("to negate")?;
-                    self.push(Value::Number(-n))?
+                    self.push(Value::Number(-n))?;
                 }
                 OpCode::Nil => self.push(Value::Nil)?,
                 OpCode::Not => {
                     let value = self.pop().is_false();
-                    self.push(Value::Bool(value))?
+                    self.push(Value::Bool(value))?;
                 }
                 OpCode::NotEqual => self.bin_bool_op(|x, y| x != y)?,
                 OpCode::Pop => {
@@ -606,20 +613,18 @@ impl Vm {
                     self.close_upvalue(frame.slot);
                     if self.frames.is_empty() {
                         return Ok(());
-                    } else {
-                        self.stack.truncate(frame.slot);
-                        self.push(result)?
                     }
+                    self.stack.truncate(frame.slot);
+                    self.push(result)?;
                 }
                 OpCode::ReturnNil => {
                     let frame = self.frames.pop().unwrap();
                     self.close_upvalue(frame.slot);
                     if self.frames.is_empty() {
                         return Ok(());
-                    } else {
-                        self.stack.truncate(frame.slot);
-                        self.push(Value::Nil)?
                     }
+                    self.stack.truncate(frame.slot);
+                    self.push(Value::Nil)?;
                 }
                 OpCode::SetIndexArray => {
                     let value = self.pop();
@@ -627,7 +632,7 @@ impl Vm {
                     if let Value::Array(arrayref) = self.pop() {
                         let array = self.gc.deref_mut(arrayref);
                         array[index as usize] = value;
-                        self.push(Value::Array(arrayref))?
+                        self.push(Value::Array(arrayref))?;
                     } else {
                         return Err(self.runtime_error("No array found on stack when indexing."));
                     }
@@ -657,7 +662,7 @@ impl Vm {
                             let instance = self.gc.deref_mut(instance);
                             instance.fields.insert(name, value);
                             self.pop();
-                            self.push(value)?
+                            self.push(value)?;
                         } else {
                             return Err(self.runtime_error(
                                 "Error: Invalid identifier found for usage on stack.",
@@ -681,7 +686,7 @@ impl Vm {
                 OpCode::SuperInvoke((name, count)) => {
                     if let Value::VString(name) = self.current_chunk().get_constant(name) {
                         if let Value::Class(class) = self.pop() {
-                            self.invoke_from_class(class, name, count)?
+                            self.invoke_from_class(class, name, count)?;
                         } else {
                             return Err(self.runtime_error("No class found on the stack."));
                         }
@@ -721,7 +726,7 @@ impl Vm {
             let closure = self.gc.deref(frame.closure);
             let function = self.gc.deref(closure.function);
             let name = self.gc.deref(function.name);
-            let name = if name.is_empty() { "<script>" } else { &name };
+            let name = if name.is_empty() { "<script>" } else { name };
             let line = function.chunk.get_line(frame.ip - 1);
             eprintln!("[line {}] in {}", line, name);
         }
@@ -783,11 +788,11 @@ impl Vm {
                         }
                     }
                     None => {
-                        if arg_count != 0 {
+                        if arg_count == 0 {
+                            Ok(())
+                        } else {
                             let msg = format!("Expected 0 arguments but got {}.", arg_count);
                             Err(self.runtime_error(&msg))
-                        } else {
-                            Ok(())
                         }
                     }
                 }
@@ -807,16 +812,16 @@ impl Vm {
     fn call(&mut self, callee: GcRef<Closure>, arg_count: usize) -> Result<(), InterpretError> {
         let closure = self.gc.deref(callee);
         let function = self.gc.deref(closure.function);
-        if function.arity != arg_count {
+        if function.arity == arg_count {
+            let frame = CallFrame::new(callee, self.stack.len() - arg_count - 1);
+            self.frames.push(frame);
+            Ok(())
+        } else {
             let msg = format!(
                 "Expected {} arguments but got {}.",
                 function.arity, arg_count
             );
             Err(self.runtime_error(&msg))
-        } else {
-            let frame = CallFrame::new(callee, self.stack.len() - arg_count - 1);
-            self.frames.push(frame);
-            Ok(())
         }
     }
 
@@ -891,9 +896,7 @@ impl Vm {
         let receiver = self.peek(arg_count);
         let method_name = self.gc.deref(name).clone();
         if method_name == "copy" {
-            if arg_count != 0 {
-                Err(self.runtime_error("Copy requires only one argument."))
-            } else {
+            if arg_count == 0 {
                 let to_push = match receiver {
                     Value::Array(value) => {
                         let new = self.gc.deref(value).clone();
@@ -914,6 +917,8 @@ impl Vm {
                 };
                 self.pop();
                 self.push(to_push)
+            } else {
+                Err(self.runtime_error("Copy requires only one argument."))
             }
         } else if let Value::VString(string) = receiver {
             match method_name
@@ -925,22 +930,22 @@ impl Vm {
                     Some('s') => match method_name.chars().nth(2) {
                         Some('A') => {
                             if method_name == "isAlpha" {
-                                if arg_count != 0 {
-                                    Err(self.runtime_error("isAlpha requires no arguments."))
-                                } else {
+                                if arg_count == 0 {
                                     self.pop();
                                     self.push(Value::Bool(
                                         self.gc.deref(string).chars().all(char::is_alphabetic),
                                     ))
+                                } else {
+                                    Err(self.runtime_error("isAlpha requires no arguments."))
                                 }
                             } else if method_name == "isAlphanumeric" {
-                                if arg_count != 0 {
-                                    Err(self.runtime_error("isAlphaNumeric requires no arguments."))
-                                } else {
+                                if arg_count == 0 {
                                     self.pop();
                                     self.push(Value::Bool(
                                         self.gc.deref(string).chars().all(char::is_alphanumeric),
                                     ))
+                                } else {
+                                    Err(self.runtime_error("isAlphaNumeric requires no arguments."))
                                 }
                             } else {
                                 Err(self.runtime_error(&format!(
@@ -951,13 +956,13 @@ impl Vm {
                         }
                         Some('D') => {
                             if method_name == "isDigit" {
-                                if arg_count != 0 {
-                                    Err(self.runtime_error("isDigit requires no arguments."))
-                                } else {
+                                if arg_count == 0 {
                                     self.pop();
                                     self.push(Value::Bool(
                                         self.gc.deref(string).chars().all(char::is_numeric),
                                     ))
+                                } else {
+                                    Err(self.runtime_error("isDigit requires no arguments."))
                                 }
                             } else {
                                 Err(self.runtime_error(&format!(
@@ -980,7 +985,7 @@ impl Vm {
                             Err(self.runtime_error("ord requires no arguments."))
                         } else if self.gc.deref(string).chars().count() == 1 {
                             let c = self.gc.deref(string).chars().next().unwrap();
-                            self.push_number((c as u32) as f64)
+                            self.push_number(f64::from(c as u32))
                         } else {
                             Err(self.runtime_error("ord can be called on one-char strings only."))
                         }
@@ -993,11 +998,11 @@ impl Vm {
                 }
                 'l' => {
                     if method_name == "length" {
-                        if arg_count != 0 {
-                            Err(self.runtime_error("length requires no arguments."))
-                        } else {
+                        if arg_count == 0 {
                             self.pop();
                             self.push_number(self.gc.deref(string).len() as f64)
+                        } else {
+                            Err(self.runtime_error("length requires no arguments."))
                         }
                     } else {
                         Err(self.runtime_error(&format!(
@@ -1012,7 +1017,7 @@ impl Vm {
                             Err(self.runtime_error("ord requires no arguments."))
                         } else if self.gc.deref(string).chars().count() == 1 {
                             let c = self.gc.deref(string).chars().next().unwrap();
-                            self.push_number((c as u32) as f64)
+                            self.push_number(f64::from(c as u32))
                         } else {
                             Err(self.runtime_error("ord can be called on one-char strings only."))
                         }
@@ -1041,23 +1046,23 @@ impl Vm {
         } else if let Value::Array(array) = receiver {
             match &*method_name {
                 "all" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("all requires no arguments."))
-                    } else {
+                    if arg_count == 0 {
                         self.pop();
                         self.push(Value::Bool(
                             !self.gc.deref(array).iter().any(|&x| x.is_false()),
                         ))
+                    } else {
+                        Err(self.runtime_error("all requires no arguments."))
                     }
                 }
                 "any" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("any requires no arguments."))
-                    } else {
+                    if arg_count == 0 {
                         self.pop();
                         self.push(Value::Bool(
                             self.gc.deref(array).iter().any(|&x| !x.is_false()),
                         ))
+                    } else {
+                        Err(self.runtime_error("any requires no arguments."))
                     }
                 }
                 "extend" => {
@@ -1073,11 +1078,11 @@ impl Vm {
                     }
                 }
                 "length" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("length requires no arguments."))
-                    } else {
+                    if arg_count == 0 {
                         self.pop();
                         self.push_number(self.gc.deref(array).len() as f64)
+                    } else {
+                        Err(self.runtime_error("length requires no arguments."))
                     }
                 }
                 "pop" => {
@@ -1105,18 +1110,16 @@ impl Vm {
                     }
                 }
                 "reverse" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("reverse requires only one argument."))
-                    } else {
+                    if arg_count == 0 {
                         self.gc.deref_mut(array).reverse();
                         self.pop();
                         self.push(Value::Nil)
+                    } else {
+                        Err(self.runtime_error("reverse requires only one argument."))
                     }
                 }
                 "sort" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("sort requires no arguments."))
-                    } else {
+                    if arg_count == 0 {
                         let array = self.gc.deref_mut(array);
                         if array.iter().all(|&x| matches!(x, Value::Number(_))) {
                             array.sort_by(|a, b| {
@@ -1131,6 +1134,8 @@ impl Vm {
                         } else {
                             Err(self.runtime_error("Cannot sort an array with not-number elements"))
                         }
+                    } else {
+                        Err(self.runtime_error("sort requires no arguments."))
                     }
                 }
                 _ => {
@@ -1159,9 +1164,7 @@ impl Vm {
                     }
                 }
                 "chr" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("chr requires no arguments."))
-                    } else {
+                    if arg_count == 0 {
                         self.pop();
                         let n = if n.fract() == 0.0 {
                             n as u32
@@ -1175,14 +1178,16 @@ impl Vm {
                             }
                         };
                         self.push(Value::VString(s))
+                    } else {
+                        Err(self.runtime_error("chr requires no arguments."))
                     }
                 }
                 "floor" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("floor needs one argument."))
-                    } else {
+                    if arg_count == 0 {
                         self.pop();
                         self.push_number(n.floor())
+                    } else {
+                        Err(self.runtime_error("floor needs one argument."))
                     }
                 }
                 "pow" => {
@@ -1195,19 +1200,19 @@ impl Vm {
                     }
                 }
                 "sqrt" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("sqrt expects only one argument"))
-                    } else {
+                    if arg_count == 0 {
                         self.pop();
                         self.push_number(n.sqrt())
+                    } else {
+                        Err(self.runtime_error("sqrt expects only one argument"))
                     }
                 }
                 "square" => {
-                    if arg_count != 0 {
-                        Err(self.runtime_error("square expects only one argument"))
-                    } else {
+                    if arg_count == 0 {
                         self.pop();
                         self.push_number(n * n)
+                    } else {
+                        Err(self.runtime_error("square expects only one argument"))
                     }
                 }
                 _ => {
@@ -1216,13 +1221,13 @@ impl Vm {
                 }
             }
         } else if method_name == "toString" {
-            if arg_count != 0 {
-                Err(self.runtime_error("toString requires no arguments"))
-            } else {
+            if arg_count == 0 {
                 let string = format!("{}", GcTraceFormatter::new(receiver, &self.gc));
                 let string = self.alloc(string);
                 self.pop();
                 self.push(Value::VString(string))
+            } else {
+                Err(self.runtime_error("toString requires no arguments"))
             }
         } else {
             Err(self.runtime_error("Only instances have methods."))
@@ -1243,12 +1248,12 @@ impl Vm {
                 Err(self.runtime_error("Got method that is not closure."))
             }
         } else if self.gc.deref(name) == "toString" {
-            if count != 0 {
-                Err(self.runtime_error("toString requires no arguments."))
-            } else {
+            if count == 0 {
                 let name = class.name;
                 self.pop();
                 self.push(Value::VString(name))
+            } else {
+                Err(self.runtime_error("toString requires no arguments."))
             }
         } else {
             let name = &self.gc.deref(name);
@@ -1448,23 +1453,21 @@ fn min(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
 
 #[inline]
 fn random(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    if args.len() != 2 {
-        Err("random needs two arguments".to_owned())
-    } else {
+    if args.len() == 2 {
         let mut rng = rand::thread_rng();
         if let (Value::Number(n0), Value::Number(n1)) = (args[0], args[1]) {
             Ok(Value::Number(rng.gen_range(n0..n1)))
         } else {
             Err("random needs two numeric arguments".to_owned())
         }
+    } else {
+        Err("random needs two arguments".to_owned())
     }
 }
 
 #[inline]
 fn random_int(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
-    if args.len() != 2 {
-        Err("random needs two arguments".to_owned())
-    } else {
+    if args.len() == 2 {
         let mut rng = rand::thread_rng();
         if let (Value::Number(n0), Value::Number(n1)) = (args[0], args[1]) {
             if n0.fract() == 0.0 && n1.fract() == 0.0 {
@@ -1475,5 +1478,7 @@ fn random_int(_vm: &Vm, args: &[Value]) -> Result<Value, String> {
         } else {
             Err("randomInt needs two numeric arguments".to_owned())
         }
+    } else {
+        Err("random needs two arguments".to_owned())
     }
 }

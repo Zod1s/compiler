@@ -68,7 +68,7 @@ pub fn run_file(filename: &str, interpreter: &mut Interpreter) {
 }
 
 pub fn prompt(interpreter: &mut Interpreter) {
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<()>::new().unwrap();
     if rl.load_history("history.txt").is_err() {}
     loop {
         let readline = rl.readline(">>> ");

@@ -2,7 +2,7 @@ use crate::{
     chunk::{Disassembler, OpCode},
     gc::{Gc, GcRef},
     object::{Function, FunctionType, FunctionUpvalue},
-    scanner::*,
+    scanner::{Scanner, Token, TokenType},
     types::{InterpretError, Precedence, Value},
 };
 use std::{collections::HashMap, mem};
@@ -755,11 +755,11 @@ impl<'s> Parser<'s> {
     // helpers
 
     fn match_token(&mut self, ttype: TokenType) -> bool {
-        if !self.check(ttype) {
-            false
-        } else {
+        if self.check(ttype) {
             self.advance();
             true
+        } else {
+            false
         }
     }
 
@@ -773,20 +773,19 @@ impl<'s> Parser<'s> {
         while self.current.token_type != TokenType::Eof {
             if self.previous.token_type == TokenType::Semicolon {
                 return;
-            } else {
-                match self.current.token_type {
-                    TokenType::Class
-                    | TokenType::Fun
-                    | TokenType::Var
-                    | TokenType::For
-                    | TokenType::If
-                    | TokenType::While
-                    | TokenType::Print
-                    | TokenType::Return => return,
-                    _ => (),
-                }
-                self.advance();
             }
+            match self.current.token_type {
+                TokenType::Class
+                | TokenType::Fun
+                | TokenType::Var
+                | TokenType::For
+                | TokenType::If
+                | TokenType::While
+                | TokenType::Print
+                | TokenType::Return => return,
+                _ => (),
+            }
+            self.advance();
         }
     }
 
@@ -806,7 +805,7 @@ impl<'s> Parser<'s> {
             self.mark_initialized();
             return;
         }
-        self.emit_opcode(OpCode::DefineGlobal(var))
+        self.emit_opcode(OpCode::DefineGlobal(var));
     }
 
     fn declare_varible(&mut self) {

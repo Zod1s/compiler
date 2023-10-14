@@ -52,7 +52,7 @@ pub fn run_file(filename: &str, mut vm: Vm) {
 }
 
 pub fn repl(mut vm: Vm) {
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<()>::new().unwrap();
     if rl.load_history("history.txt").is_err() {}
     loop {
         let readline = rl.readline(">> ");
